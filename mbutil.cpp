@@ -7,6 +7,9 @@
 #include "include/sqlite3.h"
 #include "include/sqlite_types.hpp"
 
+#include "gdal_priv.h"
+#include "cpl_conv.h" // for CPLMalloc()
+
 void setup_mbtiles(std::string filename)
 {
     char* zErrMsg;
@@ -19,6 +22,23 @@ void setup_mbtiles(std::string filename)
     "create unique index tile_index on tiles "
     "(zoom_level, tile_column, tile_row);", 
     NULL, 0, &zErrMsg);
+}
+
+void raster_to_mbtiles(std::string input_filename, std::string output_filename)
+{
+    namespace fs = boost::filesystem;
+    if (!fs::is_regular_file(output_filename))
+    {
+        setup_mbtiles(output_filename);
+    }
+
+    GDALDataset  *poDataset;
+    GDALAllRegister();
+    poDataset = (GDALDataset *) GDALOpen(input_filename.c_str(), GA_ReadOnly);
+    if(poDataset == NULL)
+    {
+        std::cerr << "GDAL input could not be opened\n";
+    }
 }
 
 void disk_to_mbtiles(std::string input_filename, std::string output_filename)
@@ -129,7 +149,12 @@ int main(int ac, char** av)
         std::string input_filename = vm["input"].as<std::string>();
         std::string output_filename = vm["output"].as<std::string>();
 
-        if (fs::is_regular_file(input_filename))
+        if (fs::is_regular_file(input_filename) &&
+            fs::is_regular_file(output_filename))
+        {
+            raster_to_mbtiles(input_filename, output_filename);
+        }
+        else if (fs::is_regular_file(input_filename))
         {
             mbtiles_to_disk(input_filename, output_filename);
         }
