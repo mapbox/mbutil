@@ -142,6 +142,21 @@ void mbtiles_to_disk(std::string input_filename, std::string output_filename)
         file << data;
         file.close();
     }
+
+    std::string metadata_location = str(boost::format("%s/metadata.json") %
+            output_filename);
+
+    boost::property_tree::ptree pt;
+    std::ostringstream mq;
+    mq << "SELECT name, value FROM metadata;";
+    sqlite_resultset* ms (dataset_->execute_query (mq.str()));
+    while (ms->is_valid() && ms->step_next())
+    {
+        std::string k = ms->column_text(0);
+        std::string v = ms->column_text(1);
+        pt.put(str(boost::format("metadata.%s") % k), v);
+    }
+    boost::property_tree::write_json(metadata_location, pt);
 }
 
 int main(int ac, char** av)
