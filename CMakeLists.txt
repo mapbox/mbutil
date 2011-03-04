@@ -7,9 +7,11 @@ ADD_DEFINITIONS(-g -O2 -Wall -W -Werror -lsqlite3)
 ADD_EXECUTABLE(mbutil mbutil.cpp)
 
 FIND_PACKAGE(Boost REQUIRED COMPONENTS system program_options filesystem regex)
+FIND_PACKAGE(Sqlite3 REQUIRED)
 
 link_directories(
     ${Boost_LIBRARY_DIRS}
+    ${SQLITE_LIBRARIES}
     )
 include_directories(
     ${Boost_INCLUDE_DIRS}
@@ -17,5 +19,6 @@ include_directories(
 
 target_link_libraries (
     mbutil
+    ${SQLITE_LIBRARIES}
     ${Boost_LIBRARIES}
     )
