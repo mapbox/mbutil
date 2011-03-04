@@ -14,7 +14,7 @@ Import a directory into a `mbtiles` file
 
 ## Building
 
-MBUtil requires [boost](http://www.boost.org/) and [SQLite](http://sqlite.org/).
+MBUtil requires [cmake](http://www.cmake.org/), [boost](http://www.boost.org/) and [SQLite](http://sqlite.org/) to build.
 
     make
 
