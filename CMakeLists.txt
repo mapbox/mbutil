@@ -4,6 +4,7 @@ list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 PROJECT(mbutil)
 
 ADD_DEFINITIONS(-g -O2 -Wall -W -Werror -lsqlite3)
+SET(CMAKE_EXE_LINKER_FLAGS "-undefined dynamic_lookup")
 ADD_EXECUTABLE(mbutil mbutil.cpp)
 
 FIND_PACKAGE(Boost REQUIRED COMPONENTS system program_options filesystem regex)
