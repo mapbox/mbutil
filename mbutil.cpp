@@ -3,6 +3,7 @@
 #include <boost/filesystem/fstream.hpp>
 #include <boost/format.hpp>
 #include <boost/regex.hpp>
+#include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
 #include <iostream>
@@ -76,7 +77,11 @@ void disk_to_mbtiles(std::string input_filename, std::string output_filename) {
         dir != end; ++dir ) {
         if (fs::is_regular_file(*dir)) {
             boost::smatch what;
+#if (BOOST_FILESYSTEM_VERSION == 3)
+            if (boost::regex_match((*dir).path().string(),
+#else
             if (boost::regex_match((*dir).string(),
+#endif
                 what,
                 e,
                 boost::match_any)) {
@@ -103,7 +108,11 @@ void disk_to_mbtiles(std::string input_filename, std::string output_filename) {
                 free(data);
             } else {
                 std::cout << "no match\n";
+#if (BOOST_FILESYSTEM_VERSION == 3)
+                std::cout << (*dir).path().string() << "\n";
+#else
                 std::cout << (*dir).string() << "\n";
+#endif
             }
         }
     }

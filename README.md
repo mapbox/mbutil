@@ -19,6 +19,10 @@ MBUtil requires [cmake](http://www.cmake.org/), [boost](http://www.boost.org/) a
     cmake .
     make
 
+### Ubuntu
+
+    sudo apt-get install cmake
+
 ## Metadata
 
 MBUtil imports and exports metadata as JSON, in the root of the tile directory, as a file named `metadata.json`.
