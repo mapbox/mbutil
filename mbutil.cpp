@@ -1,3 +1,4 @@
+// Copyright Tom MacWright 2011 Development Seed (BSD)
 #include <boost/program_options.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/filesystem/fstream.hpp>
@@ -6,8 +7,9 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include <boost/foreach.hpp>
-#include <iostream>
 #include <sqlite3.h>
+#include <string>
+#include <set>
 #include "include/sqlite_types.hpp"
 
 void setup_mbtiles(std::string filename) {
@@ -65,9 +67,8 @@ void disk_to_mbtiles(std::string input_filename, std::string output_filename) {
         BOOST_FOREACH(boost::property_tree::ptree::value_type &v,
                 pt.get_child("metadata"))
             add_metadata(db, v.first.data(), v.second.data());
-        
     } else {
-        std::cerr << "metadata.json not found\n";
+        fprintf(stderr, "metadata.json not found\n");
     }
 
     // TODO(tmcw) weak regex.
@@ -79,12 +80,11 @@ void disk_to_mbtiles(std::string input_filename, std::string output_filename) {
             boost::smatch what;
 #if (BOOST_FILESYSTEM_VERSION == 3)
             if (boost::regex_match((*dir).path().string(),
+                what, e, boost::match_any)) {
 #else
             if (boost::regex_match((*dir).string(),
+                what, e, boost::match_any)) {
 #endif
-                what,
-                e,
-                boost::match_any)) {
                 fsize = fs::file_size(*dir);
                 char* data = (char*) malloc(sizeof(char) * fsize);
                 fs::ifstream f(*dir);
@@ -107,11 +107,11 @@ void disk_to_mbtiles(std::string input_filename, std::string output_filename) {
                 sqlite3_clear_bindings(insert_statement);
                 free(data);
             } else {
-                std::cout << "no match\n";
+                // std::cout << "no match\n";
 #if (BOOST_FILESYSTEM_VERSION == 3)
-                std::cout << (*dir).path().string() << "\n";
+                // std::cout << (*dir).path().string() << "\n";
 #else
-                std::cout << (*dir).string() << "\n";
+                // std::cout << (*dir).string() << "\n";
 #endif
             }
         }
@@ -135,7 +135,7 @@ void mbtiles_to_disk(std::string input_filename, std::string output_filename) {
         int size;
         std::ostringstream data;
         std::string image_data;
-        char* addr = (char*) rs->column_blob(3, size);
+        char* addr = reinterpret_cast<char*>(rs->column_blob(3, size));
         memcpy(&image_data, addr, size);
         fs::create_directories(str(boost::format("%s/%d/%d") %
             output_filename % z % x));
@@ -151,7 +151,7 @@ void mbtiles_to_disk(std::string input_filename, std::string output_filename) {
     boost::property_tree::ptree pt;
     std::ostringstream mq;
     mq << "SELECT name, value FROM metadata;";
-    sqlite_resultset* ms (dataset_->execute_query (mq.str()));
+    sqlite_resultset* ms(dataset_->execute_query(mq.str()));
     while (ms->is_valid() && ms->step_next()) {
         std::string k = ms->column_text(0);
         std::string v = ms->column_text(1);
@@ -188,7 +188,9 @@ int main(int ac, char** av) {
     }
 
     if (vm.count("help")) {
-        std::cout << desc << "\n";
+        std::ostringstream d;
+        desc.print(d);
+        fprintf(stdout, "%s\n", d.str().c_str());
         return 1;
     }
     return 0;
