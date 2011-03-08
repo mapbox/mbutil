@@ -1,4 +1,11 @@
 #!/usr/bin/env python
+
+# MBUtil: a tool for MBTiles files
+# Supports importing, exporting, and more
+# 
+# (c) Development Seed 2011
+# Licensed under BSD
+
 import sqlite3, uuid, sys, logging, time, os, json
 from optparse import OptionParser
 
@@ -31,6 +38,7 @@ def optimize_connection(con):
     con.execute("""PRAGMA synchronous=0""")
     con.execute("""PRAGMA locking_mode=EXCLUSIVE""")
     con.execute("""PRAGMA journal_mode=TRUNCATE""")
+    con.commit()
 
 def compression_prepare(cur, con):
     cur.execute("""
@@ -45,6 +53,13 @@ def compression_prepare(cur, con):
         tile_row integer, 
         tile_id VARCHAR(256));
     """)
+    con.commit()
+
+def optimize_database(con):
+    print 'analyzing db'
+    con.execute("""ANALYZE;""")
+    print 'cleaning db'
+    con.execute("""VACUUM;""")
     con.commit()
 
 def compression_do(cur, con, chunk):
@@ -117,6 +132,7 @@ def compression_finalize(cur, con):
 
 def disk_to_mbtiles(directory_path, mbtiles_file):
     con = mbtiles_connect(mbtiles_file)
+    optimize_connection(con)
     mbtiles_setup(con.cursor())
     con.commit()
     try:
@@ -125,11 +141,34 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
             con.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
         con.commit()
+        print 'metadata from metadata.json restored'
     except Exception, e:
         print e
-        print 'Metadata file not found. Not inserting metadata'
+        print 'metadata.json not found'
 
-    # for root, dirs, files in os.walk(directory_path):
+    count = 0
+    msg = ""
+    for r1, zs, ignore in os.walk(directory_path):
+        for z in zs:
+            for r2, ys, ignore in os.walk(os.path.join(r1, z)):
+                for y in ys:
+                    for r2, ignore, xs in os.walk(os.path.join(r1, z, y)):
+                        for x in xs:
+                            f = open(os.path.join(r1, z, y, x), 'r')
+                            con.execute("""insert into tiles (zoom_level,
+                                tile_row, tile_column, tile_data) values
+                                (?, ?, ?, ?);""",
+                                (z, x, y, sqlite3.Binary(f.read())))
+                            f.close()
+                            count = count + 1
+                            for c in msg: sys.stdout.write(chr(8))
+                            msg = "%s tiles inserted" % count
+                            sys.stdout.write(msg)
+                            if (count % 5000):
+                                con.commit()
+    con.commit()
+    print 'tiles inserted.'
+    optimize_database(con)
 
 def mbtiles_to_disk(mbtiles_file, directory_path):
     con = mbtiles_connect(mbtiles_file)
@@ -152,7 +191,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
         t = tiles.fetchone()
 
 if __name__ == "__main__":
-    parser = OptionParser()
+    parser = OptionParser(usage="usage: %prog [options] input output")
     parser.add_option("-w", "--window", dest="window",
         help="compression window size. larger values faster, dangerouser",
         type="int",
