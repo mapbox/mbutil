@@ -1,4 +1,4 @@
-# MBUtil
+# MBUtil (cpp)
 
 MBUtil is a utility for importing and exporting the [MBTiles](http://mbtiles.org/) format.
 
