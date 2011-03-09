@@ -131,6 +131,8 @@ def compression_finalize(cur, con):
     con.commit()
 
 def disk_to_mbtiles(directory_path, mbtiles_file):
+    print "Importing disk to MBTiles"
+    print "%s --> %s" % (directory_path, mbtiles_file)
     con = mbtiles_connect(mbtiles_file)
     optimize_connection(con)
     mbtiles_setup(con.cursor())
@@ -171,14 +173,16 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
     optimize_database(con)
 
 def mbtiles_to_disk(mbtiles_file, directory_path):
+    print "Exporting MBTiles to disk"
+    print "%s --> %s" % (mbtiles_file, directory_path)
     con = mbtiles_connect(mbtiles_file)
     cur = con.cursor()
     os.mkdir("%s" % directory_path)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
     json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'))
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
-    chunk = count / 80
     done = 0
+    msg ='' 
     tiles = con.execute('select zoom_level, tile_row, tile_column, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
@@ -188,22 +192,34 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
                 (directory_path, t[0], t[1], t[2], metadata.get('format', 'png')), 'wb')
         f.write(t[3])
         f.close()
+        done = done + 1
+        for c in msg: sys.stdout.write(chr(8))
+        msg = '%s / %s tiles exported' % (done, count)
+        sys.stdout.write(msg)
         t = tiles.fetchone()
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     parser = OptionParser(usage="usage: %prog [options] input output")
-    parser.add_option("-w", "--window", dest="window",
-        help="compression window size. larger values faster, dangerouser",
-        type="int",
+    parser.add_option('-w', '--window', dest='window',
+        help='compression window size. larger values faster, dangerouser',
+        type='int',
         default=2000)
 
     (options, args) = parser.parse_args()
 
     # Transfer operations
     if len(args) == 2:
-        if os.path.isfile(args[0]) and not os.path.isdir(args[1]):
+        if os.path.isfile(args[0]) and not os.path.exists(args[1]):
             mbtiles_file, directory_path = args
             mbtiles_to_disk(mbtiles_file, directory_path)
+        if os.path.isfile(args[0]) and os.path.exists(args[1]):
+            sys.stderr.write('To export MBTiles to disk, specify a directory that does not yet exist\n')
+            sys.exit(1)
         if os.path.isdir(args[0]) and not os.path.isfile(args[0]):
             directory_path, mbtiles_file = args
             disk_to_mbtiles(directory_path, mbtiles_file)
+        if os.path.isdir(args[0]) and os.path.isfile(args[1]):
+            sys.stderr.write('Importing tiles into already-existing MBTiles is not yet supported\n')
+            sys.exit(1)
+    else:
+        parser.print_help()
