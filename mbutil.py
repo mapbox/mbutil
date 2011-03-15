@@ -34,11 +34,10 @@ def mbtiles_connect(mbtiles_file):
         print e
         sys.exit(1)
 
-def optimize_connection(con):
-    con.execute("""PRAGMA synchronous=0""")
-    con.execute("""PRAGMA locking_mode=EXCLUSIVE""")
-    con.execute("""PRAGMA journal_mode=TRUNCATE""")
-    con.commit()
+def optimize_connection(cur):
+    cur.execute("""PRAGMA synchronous=0""")
+    cur.execute("""PRAGMA locking_mode=EXCLUSIVE""")
+    cur.execute("""PRAGMA journal_mode=TRUNCATE""")
 
 def compression_prepare(cur, con):
     cur.execute("""
@@ -53,14 +52,12 @@ def compression_prepare(cur, con):
         tile_row integer, 
         tile_id VARCHAR(256));
     """)
-    con.commit()
 
-def optimize_database(con):
+def optimize_database(cur):
     print 'analyzing db'
-    con.execute("""ANALYZE;""")
+    cur.execute("""ANALYZE;""")
     print 'cleaning db'
-    con.execute("""VACUUM;""")
-    con.commit()
+    cur.execute("""VACUUM;""")
 
 def compression_do(cur, con, chunk):
     overlapping = 0
@@ -110,16 +107,14 @@ def compression_do(cur, con, chunk):
                 print "insert into map: %s" % (time.time() - start)
         con.commit()
 
-def compression_finalize(cur, con):
+def compression_finalize(cur):
     cur.execute("""drop table tiles;""")
-    con.commit()
     cur.execute("""create view tiles as
         select map.zoom_level as zoom_level,
         map.tile_column as tile_column,
         map.tile_row as tile_row,
         images.tile_data as tile_data FROM
         map JOIN images on images.tile_id = map.tile_id;""")
-    con.commit()
     cur.execute("""
           CREATE UNIQUE INDEX map_index on map 
             (zoom_level, tile_column, tile_row);""")
@@ -128,47 +123,44 @@ def compression_finalize(cur, con):
             (tile_id);""")
     cur.execute("""vacuum;""")
     cur.execute("""analyze;""")
-    con.commit()
 
 def disk_to_mbtiles(directory_path, mbtiles_file):
     print "Importing disk to MBTiles"
     print "%s --> %s" % (directory_path, mbtiles_file)
     con = mbtiles_connect(mbtiles_file)
-    optimize_connection(con)
-    mbtiles_setup(con.cursor())
-    con.commit()
+    cur = con.cursor()
+    optimize_connection(cur)
+    mbtiles_setup(cur)
     try:
         metadata = json.load(open('%s/metadata.json' % directory_path, 'r'))
         for name, value in metadata.items():
-            con.execute('insert into metadata (name, value) values (?, ?)',
+            cur.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
-        con.commit()
         print 'metadata from metadata.json restored'
     except Exception, e:
         print e
         print 'metadata.json not found'
 
     count = 0
+    start_time = time.time()
     msg = ""
     for r1, zs, ignore in os.walk(directory_path):
         for z in zs:
-            for r2, ys, ignore in os.walk(os.path.join(r1, z)):
-                for y in ys:
-                    for r2, ignore, xs in os.walk(os.path.join(r1, z, y)):
-                        for x in xs:
-                            f = open(os.path.join(r1, z, y, x), 'r')
-                            con.execute("""insert into tiles (zoom_level,
+            for r2, xs, ignore in os.walk(os.path.join(r1, z)):
+                for x in xs:
+                    for r2, ignore, ys in os.walk(os.path.join(r1, z, x)):
+                        for y in ys:
+                            f = open(os.path.join(r1, z, x, y), 'rb')
+                            cur.execute("""insert into tiles (zoom_level,
                                 tile_row, tile_column, tile_data) values
                                 (?, ?, ?, ?);""",
                                 (z, x, y, sqlite3.Binary(f.read())))
                             f.close()
                             count = count + 1
-                            for c in msg: sys.stdout.write(chr(8))
-                            msg = "%s tiles inserted" % count
-                            sys.stdout.write(msg)
-                            if (count % 5000):
-                                con.commit()
-    con.commit()
+                            if (count % 100) == 0:
+                                for c in msg: sys.stdout.write(chr(8))
+                                msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
+                                sys.stdout.write(msg)
     print 'tiles inserted.'
     optimize_database(con)
 
