@@ -175,7 +175,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
     msg ='' 
-    tiles = con.execute('select zoom_level, tile_row, tile_column, tile_data from tiles;')
+    tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
         if not os.path.isdir("%s/%s/%s/" % (directory_path, t[0], t[1])):
