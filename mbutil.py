@@ -152,9 +152,9 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
                         for y in ys:
                             f = open(os.path.join(r1, z, x, y), 'rb')
                             cur.execute("""insert into tiles (zoom_level,
-                                tile_row, tile_column, tile_data) values
+                                tile_column, tile_row, tile_data) values
                                 (?, ?, ?, ?);""",
-                                (z, x, y, sqlite3.Binary(f.read())))
+                                (z, x, y.split('.')[0], sqlite3.Binary(f.read())))
                             f.close()
                             count = count + 1
                             if (count % 100) == 0:
