@@ -9,7 +9,8 @@
 import sqlite3, uuid, sys, logging, time, os, json
 from optparse import OptionParser
 
-logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
+
 
 def mbtiles_setup(cur):
     cur.execute("""
@@ -30,8 +31,8 @@ def mbtiles_connect(mbtiles_file):
         con = sqlite3.connect(mbtiles_file)
         return con
     except Exception, e:
-        print "Could not connect to database"
-        print e
+        logger.error("Could not connect to database")
+        logger.exception(e)
         sys.exit(1)
 
 def optimize_connection(cur):
@@ -54,9 +55,9 @@ def compression_prepare(cur, con):
     """)
 
 def optimize_database(cur):
-    print 'analyzing db'
+    logger.debug('analyzing db')
     cur.execute("""ANALYZE;""")
-    print 'cleaning db'
+    logger.debug('cleaning db')
     cur.execute("""VACUUM;""")
 
 def compression_do(cur, con, chunk):
@@ -74,7 +75,7 @@ def compression_do(cur, con, chunk):
         start = time.time()
         cur.execute("""select zoom_level, tile_column, tile_row, tile_data
             from tiles where rowid > ? and rowid <= ?""", ((i * chunk), ((i + 1) * chunk)))
-        print "select: %s" % (time.time() - start)
+        logger.debug("select: %s" % (time.time() - start))
         rows = cur.fetchall()
         for r in rows:
             total = total + 1
@@ -84,7 +85,7 @@ def compression_do(cur, con, chunk):
                 query = """insert into map 
                     (zoom_level, tile_column, tile_row, tile_id) 
                     values (?, ?, ?, ?)"""
-                print "insert: %s" % (time.time() - start)
+                logger.debug("insert: %s" % (time.time() - start))
                 cur.execute(query, (r[0], r[1], r[2], ids[files.index(r[3])]))
             else:
                 unique = unique + 1
@@ -98,13 +99,13 @@ def compression_do(cur, con, chunk):
                     (tile_id, tile_data) 
                     values (?, ?)"""
                 cur.execute(query, (str(id), sqlite3.Binary(r[3])))
-                print "insert into images: %s" % (time.time() - start)
+                logger.debug("insert into images: %s" % (time.time() - start))
                 start = time.time()
                 query = """insert into map 
                     (zoom_level, tile_column, tile_row, tile_id) 
                     values (?, ?, ?, ?)"""
                 cur.execute(query, (r[0], r[1], r[2], id))
-                print "insert into map: %s" % (time.time() - start)
+                logger.debug("insert into map: %s" % (time.time() - start))
         con.commit()
 
 def compression_finalize(cur):
@@ -125,8 +126,8 @@ def compression_finalize(cur):
     cur.execute("""analyze;""")
 
 def disk_to_mbtiles(directory_path, mbtiles_file):
-    print "Importing disk to MBTiles"
-    print "%s --> %s" % (directory_path, mbtiles_file)
+    logger.info("Importing disk to MBTiles")
+    logger.debug("%s --> %s" % (directory_path, mbtiles_file))
     con = mbtiles_connect(mbtiles_file)
     cur = con.cursor()
     optimize_connection(cur)
@@ -136,10 +137,9 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
-        print 'metadata from metadata.json restored'
-    except Exception, e:
-        print e
-        print 'metadata.json not found'
+        logger.info('metadata from metadata.json restored')
+    except IOError, e:
+        logger.warning('metadata.json not found')
 
     count = 0
     start_time = time.time()
@@ -161,12 +161,12 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
                                 for c in msg: sys.stdout.write(chr(8))
                                 msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
                                 sys.stdout.write(msg)
-    print 'tiles inserted.'
+    logger.debug('tiles inserted.')
     optimize_database(con)
 
 def mbtiles_to_disk(mbtiles_file, directory_path):
-    print "Exporting MBTiles to disk"
-    print "%s --> %s" % (mbtiles_file, directory_path)
+    logger.debug("Exporting MBTiles to disk")
+    logger.debug("%s --> %s" % (mbtiles_file, directory_path))
     con = mbtiles_connect(mbtiles_file)
     cur = con.cursor()
     os.mkdir("%s" % directory_path)
@@ -186,11 +186,13 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
         f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
-        msg = '%s / %s tiles exported' % (done, count)
-        sys.stdout.write(msg)
+        logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
 
 if __name__ == '__main__':
+
+    logging.basicConfig(level=logging.DEBUG)
+
     parser = OptionParser(usage="usage: %prog [options] input output")
     parser.add_option('-w', '--window', dest='window',
         help='compression window size. larger values faster, dangerouser',
