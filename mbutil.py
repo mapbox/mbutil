@@ -201,17 +201,17 @@ if __name__ == '__main__':
 
     # Transfer operations
     if len(args) == 2:
+        if os.path.isfile(args[0]) and os.path.exists(args[1]):
+            sys.stderr.write('To export MBTiles to disk, specify a directory that does not yet exist\n')
+            sys.exit(1)
         if os.path.isfile(args[0]) and not os.path.exists(args[1]):
             mbtiles_file, directory_path = args
             mbtiles_to_disk(mbtiles_file, directory_path)
-        if os.path.isfile(args[0]) and os.path.exists(args[1]):
-            sys.stderr.write('To export MBTiles to disk, specify a directory that does not yet exist\n')
+        if os.path.isdir(args[0]) and os.path.isfile(args[1]):
+            sys.stderr.write('Importing tiles into already-existing MBTiles is not yet supported\n')
             sys.exit(1)
         if os.path.isdir(args[0]) and not os.path.isfile(args[0]):
             directory_path, mbtiles_file = args
             disk_to_mbtiles(directory_path, mbtiles_file)
-        if os.path.isdir(args[0]) and os.path.isfile(args[1]):
-            sys.stderr.write('Importing tiles into already-existing MBTiles is not yet supported\n')
-            sys.exit(1)
     else:
         parser.print_help()
