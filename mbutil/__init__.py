@@ -188,3 +188,37 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
         logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
 
+# Deletes images that have no associated ID in the map table.
+def mbtiles_recompact(con, cur):
+    images = con.execute("""SELECT i.tile_id FROM images i LEFT JOIN map m 
+        ON i.tile_id = m.tile_id WHERE zoom_level IS NULL;""")
+    i = images.fetchone()
+    while i:
+        cur.execute("DELETE FROM images WHERE tile_id = ?", (i[0],))
+        i = images.fetchone()
+
+# This assumes both mbtiles are of the 'compact' variety
+def mbtiles_update_mbtiles(mbtiles_file_in, mbtiles_file_out):
+    logger.debug("Merging MBTiles files")
+    logger.debug("%s --> %s" % (mbtiles_file_in, mbtiles_file_out))
+    con = mbtiles_connect(mbtiles_file_out)
+    cur = con.cursor()
+    con.execute("""ATTACH DATABASE ? AS new;""", (mbtiles_file_in,))
+    count = con.execute("""SELECT count(zoom_level) FROM new.map;""").fetchone()[0]
+    done = 0
+    tiles = con.execute("""SELECT m.zoom_level, m.tile_column, m.tile_row,
+        m.tile_id, i.tile_data FROM new.map m JOIN new.images i ON m.tile_id = i.tile_id""")
+    t = tiles.fetchone()
+    while t:
+        #cur.execute("""INSERT OR REPLACE INTO map (zoom_level, tile_row, tile_column)
+        #    VALUES (?, ?, ?)""", (t[0], t[1], t[2]))
+        cur.execute("""UPDATE main.map SET tile_id = ? WHERE zoom_level = ? AND
+            tile_column = ? AND tile_row = ?""", (t[3], t[0], t[1], t[2]))
+        cur.execute("""INSERT OR REPLACE INTO images (tile_data, tile_id) 
+            VALUES (?, ?)""", (t[4], t[3]))
+        done = done + 1
+        logger.info('%s / %s tiles merged' % (done, count))
+        t = tiles.fetchone()
+    mbtiles_recompact(con, cur)
+    optimize_database(con)
+
