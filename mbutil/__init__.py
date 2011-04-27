@@ -189,7 +189,8 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
         t = tiles.fetchone()
 
 # Deletes images that have no associated ID in the map table.
-def mbtiles_recompact(con, cur):
+def delete_unused(con, cur):
+    logger.debug('deleting unused tile images')
     images = con.execute("""SELECT i.tile_id FROM images i LEFT JOIN map m 
         ON i.tile_id = m.tile_id WHERE zoom_level IS NULL;""")
     i = images.fetchone()
@@ -198,6 +199,8 @@ def mbtiles_recompact(con, cur):
         i = images.fetchone()
 
 # This assumes both mbtiles are of the 'compact' variety
+# Interactivity will not be updated (TODO)
+# Metadata will not be updated (possibly TODO as an option)
 def mbtiles_update_mbtiles(mbtiles_file_in, mbtiles_file_out):
     logger.debug("Merging MBTiles files")
     logger.debug("%s --> %s" % (mbtiles_file_in, mbtiles_file_out))
@@ -210,15 +213,21 @@ def mbtiles_update_mbtiles(mbtiles_file_in, mbtiles_file_out):
         m.tile_id, i.tile_data FROM new.map m JOIN new.images i ON m.tile_id = i.tile_id""")
     t = tiles.fetchone()
     while t:
-        #cur.execute("""INSERT OR REPLACE INTO map (zoom_level, tile_row, tile_column)
-        #    VALUES (?, ?, ?)""", (t[0], t[1], t[2]))
-        cur.execute("""UPDATE main.map SET tile_id = ? WHERE zoom_level = ? AND
-            tile_column = ? AND tile_row = ?""", (t[3], t[0], t[1], t[2]))
-        cur.execute("""INSERT OR REPLACE INTO images (tile_data, tile_id) 
+        already_exists = bool(cur.execute("""SELECT COUNT(zoom_level) FROM main.map 
+            WHERE zoom_level = ? AND tile_column = ? AND tile_row = ?;""",
+            (t[0], t[1], t[2])).fetchone()[0])
+        print "DEBUG: already_exists = %s for Z:%s X:%s Y:%s" % (already_exists, t[0], t[1], t[2])
+        if (already_exists):
+            cur.execute("""UPDATE main.map SET tile_id = ? WHERE zoom_level = ? AND
+                tile_column = ? AND tile_row = ?""", (t[3], t[0], t[1], t[2]))
+        else:
+            cur.execute("""INSERT INTO main.map (zoom_level, tile_column, tile_row, tile_id)
+                VALUES (?, ?, ?, ?)""", (t[0], t[1], t[2], t[3]))
+        cur.execute("""INSERT OR REPLACE INTO main.images (tile_data, tile_id) 
             VALUES (?, ?)""", (t[4], t[3]))
         done = done + 1
         logger.info('%s / %s tiles merged' % (done, count))
         t = tiles.fetchone()
-    mbtiles_recompact(con, cur)
+    delete_unused(con, cur)
     optimize_database(con)
 
