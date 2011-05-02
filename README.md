@@ -8,22 +8,22 @@ Git checkout (requires git)
 
     git clone git://github.com/mapbox/mbutil.git
     cd mbutil
-    ./mbutil.py -h
+    ./mb-util -h
 
 Python installation (requires easy_install)
 
     easy_install mbutil
-    mbutil.py -h
+    mb-util -h
 
 ## Usage
 
 Export an `mbtiles` file to files on the filesystem:
 
-    mbutil.py World_Light.mbtiles adirectory
+    mb-util World_Light.mbtiles adirectory
 
 Import a directory into a `mbtiles` file
 
-    mbutil.py directory World_Light.mbtiles
+    mb-util directory World_Light.mbtiles
 
 ## Requirements
 
