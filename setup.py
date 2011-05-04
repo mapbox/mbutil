@@ -6,7 +6,7 @@ setup(
     author='Tom MacWright',
     author_email='macwright@gmail.com',
     packages=['mbutil'],
-    scripts=['mbutil.py'],
+    scripts=['mb-util'],
     url='https://github.com/mapbox/mbutil',
     license='LICENSE.md',
     description='An importer and exporter for MBTiles',
