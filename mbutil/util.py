@@ -170,7 +170,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
     cur = con.cursor()
     os.mkdir("%s" % directory_path)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
-    json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'))
+    json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'),indent=4)
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
     msg ='' 
