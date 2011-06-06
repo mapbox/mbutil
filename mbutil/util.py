@@ -6,7 +6,7 @@
 # (c) Development Seed 2011
 # Licensed under BSD
 
-import sqlite3, uuid, sys, logging, time, os, json
+import sqlite3, uuid, sys, logging, time, os, json, zlib, glob, shutil
 
 logger = logging.getLogger(__name__)
 
@@ -124,7 +124,7 @@ def compression_finalize(cur):
     cur.execute("""vacuum;""")
     cur.execute("""analyze;""")
 
-def disk_to_mbtiles(directory_path, mbtiles_file):
+def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     logger.info("Importing disk to MBTiles")
     logger.debug("%s --> %s" % (directory_path, mbtiles_file))
     con = mbtiles_connect(mbtiles_file)
@@ -163,7 +163,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file):
     logger.debug('tiles inserted.')
     optimize_database(con)
 
-def mbtiles_to_disk(mbtiles_file, directory_path):
+def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     logger.debug("Exporting MBTiles to disk")
     logger.debug("%s --> %s" % (mbtiles_file, directory_path))
     con = mbtiles_connect(mbtiles_file)
@@ -174,17 +174,66 @@ def mbtiles_to_disk(mbtiles_file, directory_path):
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
     msg ='' 
+    service_version = metadata.get('version', '1.0.0')
+    base_path = os.path.join(directory_path,
+                                service_version,
+                                metadata.get('name', 'layer')
+                            )
+    if not os.path.isdir(base_path):
+        os.makedirs(base_path)
+
+    # if interactivity
+    formatter = metadata.get('formatter')
+    if formatter:
+        layer_json = os.path.join(base_path,'layer.json')
+        formatter_json = {"formatter":formatter}
+        open(layer_json,'w').write('grid(' + json.dumps(formatter_json) + ')')
+    
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
-        if not os.path.isdir("%s/%s/%s/" % (directory_path, t[0], t[1])):
-            os.makedirs("%s/%s/%s/" % (directory_path, t[0], t[1]))
-        f = open('%s/%s/%s/%s.%s' %
-                (directory_path, t[0], t[1], t[2], metadata.get('format', 'png')), 'wb')
+        tile_dir = os.path.join(base_path, str(t[0]), str(t[1]))
+        if not os.path.isdir(tile_dir):
+            os.makedirs(tile_dir)
+        tile = os.path.join(tile_dir,'%s.%s' % (t[2],metadata.get('format', 'png')))
+        f = open(tile, 'wb')
         f.write(t[3])
         f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
         logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
-
+    
+    # grids
+    count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
+    done = 0
+    msg =''
+    try:
+        grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
+        g = grids.fetchone()
+    except sqlite3.OperationalError:
+        g = None # no grids table
+    while g:
+        zoom_level = g[0]
+        tile_column = g[1]
+        tile_row = g[2]
+        grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
+        if not os.path.isdir(grid_dir):
+            os.makedirs(grid_dir)
+        grid = os.path.join(grid_dir,'%s.grid.json' % (tile_row))
+        f = open(grid, 'w')
+        grid_json = json.loads(zlib.decompress(g[3]))
+        # join up with the grid 'data' which is in pieces when stored in mbtiles file
+        grid_data_cursor = con.execute('select key_name, key_json FROM grid_data WHERE zoom_level = %(zoom_level)d and tile_column = %(tile_column)d and tile_row = %(tile_row)d;' % locals())
+        grid_data = grid_data_cursor.fetchone()
+        data = {}
+        while grid_data:
+            data[grid_data[0]] = json.loads(grid_data[1])
+            grid_data = grid_data_cursor.fetchone()
+        grid_json['data'] = data
+        f.write('grid(' + json.dumps(grid_json) + ')')
+        f.close()
+        done = done + 1
+        for c in msg: sys.stdout.write(chr(8))
+        logger.info('%s / %s grids exported' % (done, count))
+        g = grids.fetchone()

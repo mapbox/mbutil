@@ -32,7 +32,7 @@ Import a directory into a `mbtiles` file
 
 ## Requirements
 
-* Python `>= 2.5`
+* Python `>= 2.6`
 
 ## Metadata
 
