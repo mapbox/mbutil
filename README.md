@@ -10,6 +10,11 @@ Git checkout (requires git)
     cd mbutil
     ./mb-util -h
 
+    # then to install the mb-util command globally:
+    sudo python setup.py install
+    # then you can run:
+    mb-util
+    
 Python installation (requires easy_install)
 
     easy_install mbutil
