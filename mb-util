@@ -15,11 +15,21 @@ if __name__ == '__main__':
 
     logging.basicConfig(level=logging.DEBUG)
 
-    parser = OptionParser(usage="usage: %prog [options] input output")
-    parser.add_option('-w', '--window', dest='window',
-        help='compression window size. larger values faster, dangerouser',
-        type='int',
-        default=2000)
+    parser = OptionParser(usage="""usage: %prog [options] input output
+    
+    Examples:
+    
+    Export an mbtiles file to a directory of files:
+    $ mb-util world.mbtiles tiles # tiles must not alredy exist
+    
+    Import a directory of tiles into an mbtiles file:
+    $ mb-util tiles world.mbtiles # mbtiles file must not already exist""")
+    
+    # todo - add support for compression
+    #parser.add_option('-w', '--window', dest='window',
+    #    help='compression window size. larger values faster, dangerouser',
+    #    type='int',
+    #    default=2000)
 
     (options, args) = parser.parse_args()
 
@@ -28,14 +38,19 @@ if __name__ == '__main__':
         if os.path.isfile(args[0]) and os.path.exists(args[1]):
             sys.stderr.write('To export MBTiles to disk, specify a directory that does not yet exist\n')
             sys.exit(1)
+        
+        # to disk
         if os.path.isfile(args[0]) and not os.path.exists(args[1]):
             mbtiles_file, directory_path = args
-            mbtiles_to_disk(mbtiles_file, directory_path)
+            mbtiles_to_disk(mbtiles_file, directory_path, **options.__dict__)
+        
         if os.path.isdir(args[0]) and os.path.isfile(args[1]):
             sys.stderr.write('Importing tiles into already-existing MBTiles is not yet supported\n')
             sys.exit(1)
+        
+        # to mbtiles
         if os.path.isdir(args[0]) and not os.path.isfile(args[0]):
             directory_path, mbtiles_file = args
-            disk_to_mbtiles(directory_path, mbtiles_file)
+            disk_to_mbtiles(directory_path, mbtiles_file, **options.__dict__)
     else:
         parser.print_help()
