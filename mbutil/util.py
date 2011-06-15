@@ -10,6 +10,8 @@ import sqlite3, uuid, sys, logging, time, os, json, zlib, glob, shutil
 
 logger = logging.getLogger(__name__)
 
+def flip_y(zoom, y):
+    return (2**zoom-1) - y
 
 def mbtiles_setup(cur):
     cur.execute("""
@@ -131,8 +133,11 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     cur = con.cursor()
     optimize_connection(cur)
     mbtiles_setup(cur)
+    image_format = 'png'
+    grid_warning = True
     try:
         metadata = json.load(open('%s/metadata.json' % directory_path, 'r'))
+        image_format = metadata.get('format', 'png')
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
@@ -149,17 +154,22 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 for x in xs:
                     for r2, ignore, ys in os.walk(os.path.join(r1, z, x)):
                         for y in ys:
-                            f = open(os.path.join(r1, z, x, y), 'rb')
-                            cur.execute("""insert into tiles (zoom_level,
-                                tile_column, tile_row, tile_data) values
-                                (?, ?, ?, ?);""",
-                                (z, x, y.split('.')[0], sqlite3.Binary(f.read())))
-                            f.close()
-                            count = count + 1
-                            if (count % 100) == 0:
-                                for c in msg: sys.stdout.write(chr(8))
-                                msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
-                                sys.stdout.write(msg)
+                            if (y.endswith(image_format)):
+                                f = open(os.path.join(r1, z, x, y), 'rb')
+                                cur.execute("""insert into tiles (zoom_level,
+                                    tile_column, tile_row, tile_data) values
+                                    (?, ?, ?, ?);""",
+                                    (z, x, y.split('.')[0], sqlite3.Binary(f.read())))
+                                f.close()
+                                count = count + 1
+                                if (count % 100) == 0:
+                                    for c in msg: sys.stdout.write(chr(8))
+                                    msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
+                                    sys.stdout.write(msg)
+                            elif (y.endswith('grid.json')):
+                                if grid_warning:
+                                    logger.warning('grid.json interactivity import not yet supported\n')
+                                    grid_warning= False
     logger.debug('tiles inserted.')
     optimize_database(con)
 
@@ -192,10 +202,16 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
-        tile_dir = os.path.join(base_path, str(t[0]), str(t[1]))
+        z = t[0]
+        x = t[1]
+        y = t[2]
+        if kwargs.get('scheme') == 'osm':
+          y = flip_y(z,y)
+          print 'flipping'
+        tile_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(tile_dir):
             os.makedirs(tile_dir)
-        tile = os.path.join(tile_dir,'%s.%s' % (t[2],metadata.get('format', 'png')))
+        tile = os.path.join(tile_dir,'%s.%s' % (y,metadata.get('format', 'png')))
         f = open(tile, 'wb')
         f.write(t[3])
         f.close()
@@ -214,13 +230,16 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     except sqlite3.OperationalError:
         g = None # no grids table
     while g:
-        zoom_level = g[0]
-        tile_column = g[1]
-        tile_row = g[2]
+        zoom_level = g[0] # z
+        tile_column = g[1] # x
+        tile_row = g[2] # y
+        y = g[2]
+        if kwargs.get('scheme') == 'osm':
+          y = flip_y(zoom_level,y)
         grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
         if not os.path.isdir(grid_dir):
             os.makedirs(grid_dir)
-        grid = os.path.join(grid_dir,'%s.grid.json' % (tile_row))
+        grid = os.path.join(grid_dir,'%s.grid.json' % (y))
         f = open(grid, 'w')
         grid_json = json.loads(zlib.decompress(g[3]))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file

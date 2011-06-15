@@ -31,6 +31,11 @@ if __name__ == '__main__':
     #    type='int',
     #    default=2000)
 
+    parser.add_option('--scheme', dest='scheme',
+        help='Tiling scheme for exporting tiles. Default is "tms" (z/x/y), other option is "osm" which is also z/x/y but uses a flipped y coordinate',
+        type='string',
+        default='tms')
+
     (options, args) = parser.parse_args()
 
     # Transfer operations
