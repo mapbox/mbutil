@@ -14,7 +14,7 @@ Git checkout (requires git)
     sudo python setup.py install
     # then you can run:
     mb-util
-    
+
 Python installation (requires easy_install)
 
     easy_install mbutil
@@ -47,3 +47,5 @@ MBUtil imports and exports metadata as JSON, in the root of the tile directory, 
 ## Authors
 
 - Tom MacWright (tmcw)
+- Dane Springmeyer (springmeyer)
+- Mathieu Leplatre (leplatrem)

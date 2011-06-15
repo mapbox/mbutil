@@ -2,7 +2,7 @@
 
 # MBUtil: a tool for MBTiles files
 # Supports importing, exporting, and more
-# 
+#
 # (c) Development Seed 2011
 # Licensed under BSD
 
@@ -91,7 +91,7 @@ def compression_do(cur, con, chunk):
             else:
                 unique = unique + 1
                 id = str(uuid.uuid4())
-    
+
                 ids.append(id)
                 files.append(r[3])
 
@@ -198,7 +198,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         layer_json = os.path.join(base_path,'layer.json')
         formatter_json = {"formatter":formatter}
         open(layer_json,'w').write('grid(' + json.dumps(formatter_json) + ')')
-    
+
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
@@ -219,7 +219,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         for c in msg: sys.stdout.write(chr(8))
         logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
-    
+
     # grids
     count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
     done = 0
