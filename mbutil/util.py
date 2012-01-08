@@ -221,10 +221,10 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         t = tiles.fetchone()
 
     # grids
-    count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
     done = 0
     msg =''
     try:
+        count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
         grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
         g = grids.fetchone()
     except sqlite3.OperationalError:
