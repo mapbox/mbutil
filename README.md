@@ -38,11 +38,20 @@ Import a directory into a `mbtiles` file
 
 MBUtil imports and exports metadata as JSON, in the root of the tile directory, as a file named `metadata.json`.
 
-    {
-        "name": "World Light",
-        "description": "A Test Metadata",
-        "version": "3"
-    }
+```javascript
+{
+    "name": "World Light",
+    "description": "A Test Metadata",
+    "version": "3"
+}
+```
+
+## Testing
+
+This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests
+and run
+
+    nosetests
 
 ## Authors
 

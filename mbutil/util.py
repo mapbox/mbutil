@@ -3,10 +3,10 @@
 # MBUtil: a tool for MBTiles files
 # Supports importing, exporting, and more
 #
-# (c) Development Seed 2011
+# (c) Development Seed 2012
 # Licensed under BSD
 
-import sqlite3, uuid, sys, logging, time, os, json, zlib, glob, shutil
+import sqlite3, uuid, sys, logging, time, os, json, zlib
 
 logger = logging.getLogger(__name__)
 
@@ -21,10 +21,10 @@ def mbtiles_setup(cur):
             tile_row integer,
             tile_data blob);
             """)
-    cur.execute("""create table metadata 
+    cur.execute("""create table metadata
         (name text, value text);""")
     cur.execute("""create unique index name on metadata (name);""")
-    cur.execute("""create unique index tile_index on tiles 
+    cur.execute("""create unique index tile_index on tiles
         (zoom_level, tile_column, tile_row);""")
 
 def mbtiles_connect(mbtiles_file):
@@ -39,7 +39,7 @@ def mbtiles_connect(mbtiles_file):
 def optimize_connection(cur):
     cur.execute("""PRAGMA synchronous=0""")
     cur.execute("""PRAGMA locking_mode=EXCLUSIVE""")
-    cur.execute("""PRAGMA journal_mode=TRUNCATE""")
+    cur.execute("""PRAGMA journal_mode=DELETE""")
 
 def compression_prepare(cur, con):
     cur.execute("""
@@ -49,9 +49,9 @@ def compression_prepare(cur, con):
     """)
     cur.execute("""
       CREATE TABLE if not exists map (
-        zoom_level integer, 
-        tile_column integer, 
-        tile_row integer, 
+        zoom_level integer,
+        tile_column integer,
+        tile_row integer,
         tile_id VARCHAR(256));
     """)
 
@@ -83,8 +83,8 @@ def compression_do(cur, con, chunk):
             if r[3] in files:
                 overlapping = overlapping + 1
                 start = time.time()
-                query = """insert into map 
-                    (zoom_level, tile_column, tile_row, tile_id) 
+                query = """insert into map
+                    (zoom_level, tile_column, tile_row, tile_id)
                     values (?, ?, ?, ?)"""
                 logger.debug("insert: %s" % (time.time() - start))
                 cur.execute(query, (r[0], r[1], r[2], ids[files.index(r[3])]))
@@ -96,14 +96,14 @@ def compression_do(cur, con, chunk):
                 files.append(r[3])
 
                 start = time.time()
-                query = """insert into images 
-                    (tile_id, tile_data) 
+                query = """insert into images
+                    (tile_id, tile_data)
                     values (?, ?)"""
                 cur.execute(query, (str(id), sqlite3.Binary(r[3])))
                 logger.debug("insert into images: %s" % (time.time() - start))
                 start = time.time()
-                query = """insert into map 
-                    (zoom_level, tile_column, tile_row, tile_id) 
+                query = """insert into map
+                    (zoom_level, tile_column, tile_row, tile_id)
                     values (?, ?, ?, ?)"""
                 cur.execute(query, (r[0], r[1], r[2], id))
                 logger.debug("insert into map: %s" % (time.time() - start))
@@ -118,10 +118,10 @@ def compression_finalize(cur):
         images.tile_data as tile_data FROM
         map JOIN images on images.tile_id = map.tile_id;""")
     cur.execute("""
-          CREATE UNIQUE INDEX map_index on map 
+          CREATE UNIQUE INDEX map_index on map
             (zoom_level, tile_column, tile_row);""")
     cur.execute("""
-          CREATE UNIQUE INDEX images_id on images 
+          CREATE UNIQUE INDEX images_id on images
             (tile_id);""")
     cur.execute("""vacuum;""")
     cur.execute("""analyze;""")
@@ -177,13 +177,12 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     logger.debug("Exporting MBTiles to disk")
     logger.debug("%s --> %s" % (mbtiles_file, directory_path))
     con = mbtiles_connect(mbtiles_file)
-    cur = con.cursor()
     os.mkdir("%s" % directory_path)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
-    json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'),indent=4)
+    json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'), indent=4)
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
-    msg ='' 
+    msg = ''
     service_version = metadata.get('version', '1.0.0')
     base_path = os.path.join(directory_path,
                                 service_version,
@@ -222,7 +221,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
 
     # grids
     done = 0
-    msg =''
+    msg = ''
     try:
         count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
         grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
@@ -232,8 +231,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     while g:
         zoom_level = g[0] # z
         tile_column = g[1] # x
-        tile_row = g[2] # y
-        y = g[2]
+        y = g[2] # y
         if kwargs.get('scheme') == 'osm':
           y = flip_y(zoom_level,y)
         grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
@@ -243,7 +241,11 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f = open(grid, 'w')
         grid_json = json.loads(zlib.decompress(g[3]))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file
-        grid_data_cursor = con.execute('select key_name, key_json FROM grid_data WHERE zoom_level = %(zoom_level)d and tile_column = %(tile_column)d and tile_row = %(tile_row)d;' % locals())
+        grid_data_cursor = con.execute('''select key_name, key_json FROM
+            grid_data WHERE
+            zoom_level = %(zoom_level)d and
+            tile_column = %(tile_column)d and
+            tile_row = %(tile_row)d;''' % locals())
         grid_data = grid_data_cursor.fetchone()
         data = {}
         while grid_data:
