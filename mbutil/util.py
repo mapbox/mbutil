@@ -136,13 +136,13 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     image_format = 'png'
     grid_warning = True
     try:
-        metadata = json.load(open('%s/metadata.json' % directory_path, 'r'))
+        metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
         image_format = metadata.get('format', 'png')
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
         logger.info('metadata from metadata.json restored')
-    except IOError, e:
+    except IOError:
         logger.warning('metadata.json not found')
 
     count = 0
@@ -179,7 +179,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     con = mbtiles_connect(mbtiles_file)
     os.mkdir("%s" % directory_path)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
-    json.dump(metadata, open('%s/metadata.json' % directory_path, 'w'), indent=4)
+    json.dump(metadata, open(os.path.join(directory_path, 'metadata.json'), 'w'), indent=4)
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
     msg = ''

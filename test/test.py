@@ -13,6 +13,7 @@ def clear_data():
 def test_mbtiles_to_disk():
     mbtiles_to_disk('test/data/one_tile.mbtiles', 'test/output')
     assert os.path.exists('test/output/1.0.0/shadowplay/0/0/0.png')
+    assert os.path.exists('test/output/metadata.json')
 
 @with_setup(clear_data, clear_data)
 def test_mbtiles_to_disk_and_back():
