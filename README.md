@@ -1,6 +1,11 @@
 # MBUtil
 
-MBUtil is a utility for importing and exporting the [MBTiles](http://mbtiles.org/) format.
+MBUtil is a utility for importing and exporting the [MBTiles](http://mbtiles.org/) format,
+typically created with [MapBox](http://mapbox.com/) [TileMill](http://mapbox.com/tilemill/).
+
+Before exporting tiles to disk, see if there's a [MapBox Hosting plan](http://mapbox.com/plans/)
+or an open source [MBTiles server implementation](https://github.com/mapbox/mbtiles-spec/wiki/Implementations)
+that works for you - tiles on disk are notoriously difficult to manage.
 
 ## Installation
 
@@ -52,6 +57,14 @@ This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for t
 and run
 
     nosetests
+
+## See Also
+
+* [node-mbtiles provides mbpipe](https://github.com/mapbox/node-mbtiles/wiki/Post-processing-MBTiles-with-MBPipe), a useful utility.
+
+## License
+
+BSD - see LICENSE.md
 
 ## Authors
 
