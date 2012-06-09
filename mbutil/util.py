@@ -204,7 +204,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         z = t[0]
         x = t[1]
         y = t[2]
-        if kwargs.get('scheme') == 'osm':
+        if kwargs.get('scheme') == 'xyz':
           y = flip_y(z,y)
           print 'flipping'
         tile_dir = os.path.join(base_path, str(z), str(x))
@@ -232,7 +232,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         zoom_level = g[0] # z
         tile_column = g[1] # x
         y = g[2] # y
-        if kwargs.get('scheme') == 'osm':
+        if kwargs.get('scheme') == 'xyz':
           y = flip_y(zoom_level,y)
         grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
         if not os.path.isdir(grid_dir):
