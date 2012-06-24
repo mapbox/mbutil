@@ -245,7 +245,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             grid_data WHERE
             zoom_level = %(zoom_level)d and
             tile_column = %(tile_column)d and
-            tile_row = %(tile_row)d;''' % locals())
+            tile_row = %(y)d;''' % locals())
         grid_data = grid_data_cursor.fetchone()
         data = {}
         while grid_data:
