@@ -232,6 +232,11 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         zoom_level = g[0] # z
         tile_column = g[1] # x
         y = g[2] # y
+        grid_data_cursor = con.execute('''select key_name, key_json FROM
+            grid_data WHERE
+            zoom_level = %(zoom_level)d and
+            tile_column = %(tile_column)d and
+            tile_row = %(y)d;''' % locals() )
         if kwargs.get('scheme') == 'xyz':
           y = flip_y(zoom_level,y)
         grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
@@ -241,11 +246,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f = open(grid, 'w')
         grid_json = json.loads(zlib.decompress(g[3]))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file
-        grid_data_cursor = con.execute('''select key_name, key_json FROM
-            grid_data WHERE
-            zoom_level = %(zoom_level)d and
-            tile_column = %(tile_column)d and
-            tile_row = %(y)d;''' % locals())
         grid_data = grid_data_cursor.fetchone()
         data = {}
         while grid_data:
