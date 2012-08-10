@@ -154,19 +154,22 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 for x in xs:
                     for r2, ignore, ys in os.walk(os.path.join(r1, z, x)):
                         for y in ys:
-                            if (y.endswith(image_format)):
-                                f = open(os.path.join(r1, z, x, y), 'rb')
+                            y, ext = y.split('.', 1)
+                            if (ext == image_format):
+                                f = open(os.path.join(r1, z, x, y+'.'+ext), 'rb')
+                                if kwargs.get('scheme') == 'xyz':
+                                    y = flip_y(int(z), int(y))
                                 cur.execute("""insert into tiles (zoom_level,
                                     tile_column, tile_row, tile_data) values
                                     (?, ?, ?, ?);""",
-                                    (z, x, y.split('.')[0], sqlite3.Binary(f.read())))
+                                    (z, x, y, sqlite3.Binary(f.read())))
                                 f.close()
                                 count = count + 1
                                 if (count % 100) == 0:
                                     for c in msg: sys.stdout.write(chr(8))
                                     msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
                                     sys.stdout.write(msg)
-                            elif (y.endswith('grid.json')):
+                            elif (ext == 'grid.json'):
                                 if grid_warning:
                                     logger.warning('grid.json interactivity import not yet supported\n')
                                     grid_warning= False
@@ -184,10 +187,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     done = 0
     msg = ''
     service_version = metadata.get('version', '1.0.0')
-    base_path = os.path.join(directory_path,
-                                service_version,
-                                metadata.get('name', 'layer')
-                            )
+    base_path = directory_path
     if not os.path.isdir(base_path):
         os.makedirs(base_path)
 
