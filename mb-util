@@ -26,7 +26,7 @@ if __name__ == '__main__':
     $ mb-util tiles world.mbtiles # mbtiles file must not already exist""")
     
     parser.add_option('--scheme', dest='scheme',
-        help='''Tiling scheme for exporting tiles. Default is "xyz" (z/x/y),
+        help='''Tiling scheme of the tiles. Default is "xyz" (z/x/y),
             other option is "tms" which is also z/x/y
             but uses a flipped y coordinate''',
         type='string',
