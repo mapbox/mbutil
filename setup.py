@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name='mbutil',
-    version='0.1.0',
+    version='0.1.1',
     author='Tom MacWright',
     author_email='tom@macwright.org',
     packages=['mbutil'],
