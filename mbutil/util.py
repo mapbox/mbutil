@@ -69,7 +69,7 @@ def compression_do(cur, con, chunk):
     res = cur.fetchone()
     total_tiles = res[0]
     logging.debug("%d total tiles to fetch" % total_tiles)
-    for i in range(total_tiles / chunk):
+    for i in range(total_tiles / chunk + 1):
         logging.debug("%d / %d rounds done" % (i, (total_tiles / chunk)))
         ids = []
         files = []
