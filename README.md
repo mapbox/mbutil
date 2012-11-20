@@ -27,13 +27,30 @@ Python installation (requires easy_install)
 
 ## Usage
 
-Export an `mbtiles` file to files on the filesystem:
+    ~〉mb-util -h
+    Usage: mb-util [options] input output
 
-    mb-util World_Light.mbtiles adirectory
+        Examples:
+        Export an mbtiles file to a directory of files:
 
-Import a directory into a `mbtiles` file
+        $ mb-util world.mbtiles tiles # tiles must not already exist
 
-    mb-util directory World_Light.mbtiles
+        Import a directory of tiles into an mbtiles file:
+        $ mb-util tiles world.mbtiles # mbtiles file must not already exist
+
+    Options:
+      -h, --help       show this help message and exit
+      --scheme=SCHEME  Tiling scheme of the tiles. Default is "xyz" (z/x/y),
+                       other option is "tms" which is also z/x/y             but
+                       uses a flipped y coordinate
+
+    Export an `mbtiles` file to files on the filesystem:
+
+        mb-util World_Light.mbtiles adirectory
+
+    Import a directory into a `mbtiles` file
+
+        mb-util directory World_Light.mbtiles
 
 ## Requirements
 
