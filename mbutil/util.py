@@ -199,21 +199,28 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         open(layer_json,'w').write('grid(' + json.dumps(formatter_json) + ')')
 
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
+    prev_crc = 0
+    prev_tile = ''
     t = tiles.fetchone()
     while t:
         z = t[0]
         x = t[1]
         y = t[2]
         if kwargs.get('scheme') == 'xyz':
-          y = flip_y(z,y)
-          print 'flipping'
+            y = flip_y(z,y)
+            print 'flipping'
         tile_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(tile_dir):
             os.makedirs(tile_dir)
         tile = os.path.join(tile_dir,'%s.%s' % (y,metadata.get('format', 'png')))
-        f = open(tile, 'wb')
-        f.write(t[3])
-        f.close()
+        if zlib.crc32(t[3]) == prev_crc:
+            os.symlink(os.path.relpath(prev_tile, tile_dir), tile)
+        else:
+            prev_crc = zlib.crc32(t[3])
+            prev_tile = tile
+            f = open(tile, 'wb')
+            f.write(t[3])
+            f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
         logger.info('%s / %s tiles exported' % (done, count))
