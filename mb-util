@@ -29,7 +29,8 @@ if __name__ == '__main__':
         help='''Tiling scheme of the tiles. Default is "xyz" (z/x/y),
             other option is "tms" which is also z/x/y
             but uses a flipped y coordinate''',
-        type='string',
+        type='choice',
+        choices=['tms', 'xyz'],
         default='xyz')
 
     (options, args) = parser.parse_args()
