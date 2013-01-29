@@ -133,11 +133,12 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     cur = con.cursor()
     optimize_connection(cur)
     mbtiles_setup(cur)
-    image_format = 'png'
+    #~ image_format = 'png'
+    image_format = kwargs.get('format')
     grid_warning = True
     try:
         metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
-        image_format = metadata.get('format', 'png')
+        image_format = kwargs.get('format')
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                     (name, value))
@@ -210,7 +211,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         tile_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(tile_dir):
             os.makedirs(tile_dir)
-        tile = os.path.join(tile_dir,'%s.%s' % (y,metadata.get('format', 'png')))
+        tile = os.path.join(tile_dir,'%s.%s' % (y,kwargs.get('format')))
         f = open(tile, 'wb')
         f.write(t[3])
         f.close()
