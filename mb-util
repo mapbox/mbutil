@@ -35,13 +35,13 @@ if __name__ == '__main__':
         
     parser.add_option('--image_format', dest='format',
         help='''The format of the image tiles, either png or jpg''',
-        type='string',
+        choices=['png', 'jpg'],
         default='png')
 
     (options, args) = parser.parse_args()
 
     # Transfer operations
-    if 4 < len(args) < 2:
+    if len(args) != 2:
         parser.print_help()
         sys.exit(1)
 
