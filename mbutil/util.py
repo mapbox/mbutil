@@ -126,6 +126,10 @@ def compression_finalize(cur):
     cur.execute("""vacuum;""")
     cur.execute("""analyze;""")
 
+def getDirs(path):
+    return [name for name in os.listdir(path)
+            if os.path.isdir(os.path.join(path, name))]
+                
 def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     logger.info("Importing disk to MBTiles")
     logger.debug("%s --> %s" % (directory_path, mbtiles_file))
@@ -149,31 +153,47 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     count = 0
     start_time = time.time()
     msg = ""
-    for r1, zs, ignore in os.walk(directory_path):
-        for z in zs:
-            for r2, xs, ignore in os.walk(os.path.join(r1, z)):
-                for x in xs:
-                    for r2, ignore, ys in os.walk(os.path.join(r1, z, x)):
-                        for y in ys:
-                            y, ext = y.split('.', 1)
-                            if (ext == image_format):
-                                f = open(os.path.join(r1, z, x, y+'.'+ext), 'rb')
-                                if kwargs.get('scheme') == 'xyz':
-                                    y = flip_y(int(z), int(y))
-                                cur.execute("""insert into tiles (zoom_level,
-                                    tile_column, tile_row, tile_data) values
-                                    (?, ?, ?, ?);""",
-                                    (z, x, y, sqlite3.Binary(f.read())))
-                                f.close()
-                                count = count + 1
-                                if (count % 100) == 0:
-                                    for c in msg: sys.stdout.write(chr(8))
-                                    msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
-                                    sys.stdout.write(msg)
-                            elif (ext == 'grid.json'):
-                                if grid_warning:
-                                    logger.warning('grid.json interactivity import not yet supported\n')
-                                    grid_warning= False
+    
+    for zoomDir in getDirs(directory_path):
+        if kwargs.get("scheme") == 'ags':
+            if not "L" in zoomDir:
+                logger.warning("You appear to be using an ags scheme on an non-arcgis Server cache.")
+            z = int(zoomDir.replace("L", ""))
+        else:
+            if "L" in zoomDir:
+                logger.warning("You appear to be using a %s scheme on an arcgis Server cache. Try using --scheme=ags instead" % kwargs.get("scheme"))
+            z = int(zoomDir)
+        for rowDir in getDirs(os.path.join(directory_path, zoomDir)):
+            if kwargs.get("scheme") == 'ags':
+                y = flip_y(z, int(rowDir.replace("R", ""), 16))
+            else:
+                x = int(rowDir)
+            for imageFile in os.listdir(os.path.join(directory_path, zoomDir, rowDir)):
+                img, ext = imageFile.split('.', 1)
+                if (ext == image_format):
+                    f = open(os.path.join(directory_path, zoomDir, rowDir, imageFile), 'rb')
+                    if kwargs.get('scheme') == 'xyz':
+                        y = flip_y(int(z), int(img))
+                    elif kwargs.get("scheme") == 'ags':
+                        x = int(img.replace("C", ""), 16)
+                    else:
+                        y = int(img)
+
+                    logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
+                    cur.execute("""insert into tiles (zoom_level,
+                        tile_column, tile_row, tile_data) values
+                        (?, ?, ?, ?);""",
+                        (z, x, y, sqlite3.Binary(f.read())))
+                    f.close()
+                    count = count + 1
+                    if (count % 100) == 0:
+                        for c in msg: sys.stdout.write(chr(8))
+                        msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
+                        sys.stdout.write(msg)
+                elif (ext == 'grid.json'):
+                    if grid_warning:
+                        logger.warning('grid.json interactivity import not yet supported\n')
+                        grid_warning= False
     logger.debug('tiles inserted.')
     optimize_database(con)
 
