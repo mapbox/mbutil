@@ -6,6 +6,9 @@
 # (c) Development Seed 2012
 # Licensed under BSD
 
+# for additional reference on schema see:
+# https://github.com/mapbox/node-mbtiles/blob/master/lib/schema.sql
+
 import sqlite3, uuid, sys, logging, time, os, json, zlib
 
 logger = logging.getLogger(__name__)
