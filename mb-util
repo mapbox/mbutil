@@ -27,10 +27,11 @@ if __name__ == '__main__':
     
     parser.add_option('--scheme', dest='scheme',
         help='''Tiling scheme of the tiles. Default is "xyz" (z/x/y),
-            other option is "tms" which is also z/x/y
-            but uses a flipped y coordinate''',
+            other options are "tms" which is also z/x/y
+            but uses a flipped y coordinate, and "wms" which replicates
+            the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
         type='choice',
-        choices=['tms', 'xyz'],
+        choices=['wms', 'tms', 'xyz'],
         default='xyz')
         
     parser.add_option('--image_format', dest='format',
