@@ -131,8 +131,8 @@ def compression_finalize(cur):
 
 def getDirs(path):
     return [name for name in os.listdir(path)
-            if os.path.isdir(os.path.join(path, name))]
-                
+        if os.path.isdir(os.path.join(path, name))]
+
 def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     logger.info("Importing disk to MBTiles")
     logger.debug("%s --> %s" % (directory_path, mbtiles_file))
@@ -141,14 +141,14 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     optimize_connection(cur)
     mbtiles_setup(cur)
     #~ image_format = 'png'
-    image_format = kwargs.get('format')
+    image_format = kwargs.get('format', 'png')
     grid_warning = True
     try:
         metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
         image_format = kwargs.get('format')
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
-                    (name, value))
+                (name, value))
         logger.info('metadata from metadata.json restored')
     except IOError:
         logger.warning('metadata.json not found')
@@ -156,7 +156,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     count = 0
     start_time = time.time()
     msg = ""
-    
+
     for zoomDir in getDirs(directory_path):
         if kwargs.get("scheme") == 'ags':
             if not "L" in zoomDir:
@@ -210,7 +210,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
     msg = ''
-    service_version = metadata.get('version', '1.0.0')
     base_path = directory_path
     if not os.path.isdir(base_path):
         os.makedirs(base_path)
@@ -229,26 +228,25 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         x = t[1]
         y = t[2]
         if kwargs.get('scheme') == 'xyz':
-          y = flip_y(z,y)
-          print 'flipping'
-          tile_dir = os.path.join(base_path, str(z), str(x))
+            y = flip_y(z,y)
+            print 'flipping'
+            tile_dir = os.path.join(base_path, str(z), str(x))
         elif kwargs.get('scheme') == 'wms':
-          tile_dir = os.path.join(base_path, 
-                                  "%02d" % (z),
-                                  "%03d" % (int(x) / 1000000),
-                                  "%03d" % ((int(x) / 1000) % 1000),
-                                  "%03d" % (int(x) % 1000),
-                                  "%03d" % (int(y) / 1000000),
-                                  "%03d" % ((int(y) / 1000) % 1000)
-                                  )
+            tile_dir = os.path.join(base_path,
+                "%02d" % (z),
+                "%03d" % (int(x) / 1000000),
+                "%03d" % ((int(x) / 1000) % 1000),
+                "%03d" % (int(x) % 1000),
+                "%03d" % (int(y) / 1000000),
+                "%03d" % ((int(y) / 1000) % 1000))
         else:
-          tile_dir = os.path.join(base_path, str(z), str(x))
+            tile_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(tile_dir):
-          os.makedirs(tile_dir)
+            os.makedirs(tile_dir)
         if kwargs.get('scheme') == 'wms':
-          tile = os.path.join(tile_dir,'%03d.%s' % (int(y) % 1000, kwargs.get('format')))
+            tile = os.path.join(tile_dir,'%03d.%s' % (int(y) % 1000, kwargs.get('format', 'png')))
         else:
-          tile = os.path.join(tile_dir,'%s.%s' % (y,kwargs.get('format')))
+            tile = os.path.join(tile_dir,'%s.%s' % (y, kwargs.get('format', 'png')))
         f = open(tile, 'wb')
         f.write(t[3])
         f.close()
@@ -276,7 +274,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             tile_column = %(tile_column)d and
             tile_row = %(y)d;''' % locals() )
         if kwargs.get('scheme') == 'xyz':
-          y = flip_y(zoom_level,y)
+            y = flip_y(zoom_level,y)
         grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
         if not os.path.isdir(grid_dir):
             os.makedirs(grid_dir)
