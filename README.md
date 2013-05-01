@@ -41,8 +41,9 @@ Python installation (requires easy_install)
     Options:
       -h, --help       show this help message and exit
       --scheme=SCHEME  Tiling scheme of the tiles. Default is "xyz" (z/x/y),
-                       other option is "tms" which is also z/x/y             but
-                       uses a flipped y coordinate
+                       other options are "tms" which is also z/x/y
+                       but uses a flipped y coordinate, and "wms" which replicates
+                       the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
 
     Export an `mbtiles` file to files on the filesystem:
 
