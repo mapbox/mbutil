@@ -228,18 +228,25 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         z = t[0]
         x = t[1]
         y = t[2]
-        if kwargs.get('scheme') == 'wms':
-          tile_dir = os.path.join(base_path, "%02d", "000", "000", "%03d", "000", "000") % (z, x)
-        elif kwargs.get('scheme') == 'xyz':
+        if kwargs.get('scheme') == 'xyz':
           y = flip_y(z,y)
           print 'flipping'
           tile_dir = os.path.join(base_path, str(z), str(x))
+        elif kwargs.get('scheme') == 'wms':
+          tile_dir = os.path.join(base_path, 
+                                  "%02d" % (z),
+                                  "%03d" % (int(x) / 1000000),
+                                  "%03d" % ((int(x) / 1000) % 1000),
+                                  "%03d" % (int(x) % 1000),
+                                  "%03d" % (int(y) / 1000000),
+                                  "%03d" % ((int(y) / 1000) % 1000)
+                                  )
         else:
           tile_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(tile_dir):
           os.makedirs(tile_dir)
         if kwargs.get('scheme') == 'wms':
-          tile = os.path.join(tile_dir,'%03d.%s' % (y,kwargs.get('format')))
+          tile = os.path.join(tile_dir,'%03d.%s' % (int(y) % 1000, kwargs.get('format')))
         else:
           tile = os.path.join(tile_dir,'%s.%s' % (y,kwargs.get('format')))
         f = open(tile, 'wb')
