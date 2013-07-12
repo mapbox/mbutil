@@ -1,0 +1,122 @@
+#!/bin/bash
+
+set -e
+
+if [ "$(which sqlite3 md5sum xxd tr grep hexdump | wc -l)" -lt 5 ]; then
+    echo "Error: required commands not found.";
+    exit 1;
+fi
+
+usage() {
+    echo "Usage: mbutil <command> <args>"
+    echo "Commands:"
+    echo "  ls     <src> [tiles|grids] [zxy]"
+    echo "  get    <src> [zxy] <dest>"
+    echo "  put    <src> <file> [zxy]"
+    echo "  info   <src>"
+    echo "  pack   <src> <dest>"
+    echo "  unpack <src> <dest>"
+    exit 1;
+}
+
+schema() {
+    SCHEMA="
+    PRAGMA synchronous=OFF;
+    CREATE TABLE IF NOT EXISTS map ( zoom_level INTEGER, tile_column INTEGER, tile_row INTEGER, tile_id TEXT, grid_id TEXT );
+    CREATE TABLE IF NOT EXISTS grid_key ( grid_id TEXT, key_name TEXT );
+    CREATE TABLE IF NOT EXISTS keymap ( key_name TEXT, key_json TEXT );
+    CREATE TABLE IF NOT EXISTS grid_utfgrid ( grid_id TEXT, grid_utfgrid BLOB );
+    CREATE TABLE IF NOT EXISTS images ( tile_data blob, tile_id text );
+    CREATE TABLE IF NOT EXISTS metadata ( name text, value text );
+    CREATE UNIQUE INDEX IF NOT EXISTS map_index ON map (zoom_level, tile_column, tile_row);
+    CREATE UNIQUE INDEX IF NOT EXISTS grid_key_lookup ON grid_key (grid_id, key_name);
+    CREATE UNIQUE INDEX IF NOT EXISTS keymap_lookup ON keymap (key_name);
+    CREATE UNIQUE INDEX IF NOT EXISTS grid_utfgrid_lookup ON grid_utfgrid (grid_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS images_id ON images (tile_id);
+    CREATE UNIQUE INDEX IF NOT EXISTS name ON metadata (name);
+    CREATE VIEW IF NOT EXISTS tiles AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, images.tile_data AS tile_data FROM map JOIN images ON images.tile_id = map.tile_id;
+    CREATE VIEW IF NOT EXISTS grids AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, grid_utfgrid.grid_utfgrid AS grid FROM map JOIN grid_utfgrid ON grid_utfgrid.grid_id = map.grid_id;
+    CREATE VIEW IF NOT EXISTS grid_data AS SELECT map.zoom_level AS zoom_level, map.tile_column AS tile_column, map.tile_row AS tile_row, keymap.key_name AS key_name, keymap.key_json AS key_json FROM map JOIN grid_key ON map.grid_id = grid_key.grid_id JOIN keymap ON grid_key.key_name = keymap.key_name;"
+    echo $SCHEMA | sqlite3 $1
+}
+
+mbls() {
+    if [ ! -f $2 ]; then usage; fi
+    if [ "$3" = "grids" ]; then
+        SQL="SELECT zoom_level||'/'||tile_column||'/'||tile_row FROM grids;";
+    else
+        SQL="SELECT zoom_level||'/'||tile_column||'/'||tile_row FROM tiles;";
+    fi
+    echo $SQL | sqlite3 $2 | sed 's,|,\t,g'
+}
+
+mbget() {
+    if [ ! -f $2 ]; then usage; fi
+    if [ -z "$3" ]; then usage; fi
+    z=$(echo $3 | grep -oE "^[0-9]*")
+    x=$(echo $3 | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
+    y=$(echo $3 | grep -oE "[0-9]*$")
+    SQL="SELECT quote(tile_data) FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y LIMIT 1;";
+    OUT="$4"
+    if [ -z "$4" ]; then OUT="$z.$x.$y.png"; fi
+    echo $SQL | sqlite3 $2 | tr -d "X'" | xxd -r -p > $OUT
+}
+
+mbput() {
+    if [ ! -f $2 ]; then usage; fi
+    if [ -z "$3" ] || [ -z "$4" ]; then usage; fi
+    if [ ! -f "$3" ]; then schema $3; fi
+    z=$(echo $4 | grep -oE "^[0-9]*")
+    x=$(echo $4 | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
+    y=$(echo $4 | grep -oE "[0-9]*$")
+    ID=$(md5sum $2 | grep -oE "^[0-9a-f]*")
+    DATA=$(hexdump -ve '1/1 "%0.2X"' $2)
+    SQL="REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $y, '$ID');"
+    echo $SQL | sqlite3 $3
+}
+
+mbinfo() {
+    echo "SELECT name || ': ' || COALESCE(value,'') FROM metadata;" | sqlite3 $2
+}
+
+mbunpack() {
+    if [ -z "$3" ]; then usage; fi
+    mkdir -p $3
+    for zxy in $(mbls ls $2); do
+        mkdir -p $(dirname $3/$zxy)
+        mbget get $2 $zxy $3/$zxy.png
+    done
+}
+
+mbpack() {
+    if [ -z "$2" ] || [ ! -d "$2" ]; then usage; fi
+    if [ -f "$3" ]; then
+        echo "MBTiles file $3 already exists."
+        exit 1
+    fi
+
+    schema $3;
+
+    # @TODO chunk this single transaction into batches.
+    SQL="BEGIN TRANSACTION;"
+    for zxy in $(find $2); do
+        C=$(echo "$(echo $zxy | grep -oE "[0-9]*/[0-9]*/[0-9]*\.(png|jpg)" | grep -oE "^[0-9]*/[0-9]*/[0-9]*")")
+        if [ -z $C ]; then continue; fi
+        z=$(echo $C | grep -oE "^[0-9]*")
+        x=$(echo $C | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
+        y=$(echo $C | grep -oE "[0-9]*$")
+        ID=$(md5sum $zxy | grep -oE "^[0-9a-f]*")
+        DATA=$(hexdump -ve '1/1 "%0.2X"' $zxy)
+        SQL="$SQL REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $y, '$ID');"
+    done
+    SQL="$SQL COMMIT;"
+    echo $SQL | sqlite3 $3
+}
+
+if [ -z $1 ] || [ -z $2 ]; then usage; fi
+if [ $1 = 'ls' ]; then mbls $*; fi;
+if [ $1 = 'get' ]; then mbget $*; fi;
+if [ $1 = 'put' ]; then mbput $*; fi;
+if [ $1 = 'info' ]; then mbinfo $*; fi;
+if [ $1 = 'pack' ]; then mbpack $*; fi;
+if [ $1 = 'unpack' ]; then mbunpack $*; fi;
