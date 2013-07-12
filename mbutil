@@ -47,7 +47,13 @@ mbls() {
     else
         SQL="SELECT zoom_level||'/'||tile_column||'/'||tile_row FROM tiles;";
     fi
-    echo $SQL | sqlite3 $2 | sed 's,|,\t,g'
+    for zxy in $(echo $SQL | sqlite3 $2 | sed 's,|,\t,g'); do
+        z=$(echo $zxy | grep -oE "^[0-9]*")
+        x=$(echo $zxy | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
+        ty=$(echo $zxy | grep -oE "[0-9]*$")
+        y=$(echo "2^$z - 1 - $ty" | bc)
+        echo "$z/$x/$y";
+    done
 }
 
 mbget() {
@@ -56,7 +62,8 @@ mbget() {
     z=$(echo $3 | grep -oE "^[0-9]*")
     x=$(echo $3 | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
     y=$(echo $3 | grep -oE "[0-9]*$")
-    SQL="SELECT quote(tile_data) FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $y LIMIT 1;";
+    ty=$(echo "2^$z - 1 - $y" | bc)
+    SQL="SELECT quote(tile_data) FROM tiles WHERE zoom_level = $z AND tile_column = $x AND tile_row = $ty LIMIT 1;";
     OUT="$4"
     if [ -z "$4" ]; then OUT="$z.$x.$y.png"; fi
     echo $SQL | sqlite3 $2 | tr -d "X'" | xxd -r -p > $OUT
@@ -69,9 +76,10 @@ mbput() {
     z=$(echo $4 | grep -oE "^[0-9]*")
     x=$(echo $4 | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
     y=$(echo $4 | grep -oE "[0-9]*$")
+    ty=$(echo "2^$z - 1 - $y" | bc)
     ID=$(md5sum $2 | grep -oE "^[0-9a-f]*")
     DATA=$(hexdump -ve '1/1 "%0.2X"' $2)
-    SQL="REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $y, '$ID');"
+    SQL="REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $ty, '$ID');"
     echo $SQL | sqlite3 $3
 }
 
@@ -105,9 +113,10 @@ mbpack() {
         z=$(echo $C | grep -oE "^[0-9]*")
         x=$(echo $C | grep -oE "^[0-9]*/[0-9]*" | grep -oE "[0-9]*$")
         y=$(echo $C | grep -oE "[0-9]*$")
+        ty=$(echo "2^$z - 1 - $y" | bc)
         ID=$(md5sum $zxy | grep -oE "^[0-9a-f]*")
         DATA=$(hexdump -ve '1/1 "%0.2X"' $zxy)
-        SQL="$SQL REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $y, '$ID');"
+        SQL="$SQL REPLACE INTO images (tile_id, tile_data) values('$ID', x'$DATA'); REPLACE INTO map (zoom_level, tile_column, tile_row, tile_id) VALUES ($z, $x, $ty, '$ID');"
     done
     SQL="$SQL COMMIT;"
     echo $SQL | sqlite3 $3
