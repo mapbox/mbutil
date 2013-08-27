@@ -256,6 +256,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         t = tiles.fetchone()
 
     # grids
+    callback = kwargs.get('callback')
     done = 0
     msg = ''
     try:
@@ -288,7 +289,10 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             data[grid_data[0]] = json.loads(grid_data[1])
             grid_data = grid_data_cursor.fetchone()
         grid_json['data'] = data
-        f.write('grid(' + json.dumps(grid_json) + ')')
+        if callback in ("", "false", "null"):
+            f.write(json.dumps(grid_json))
+        else:
+            f.write('%s(%s);' % (callback, json.dumps(grid_json)))
         f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))

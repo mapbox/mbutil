@@ -39,6 +39,11 @@ if __name__ == '__main__':
         choices=['png', 'jpg'],
         default='png')
 
+    parser.add_option('--grid_callback', dest='callback',
+        help='''Option to control JSONP callback for UTFGrid tiles. If grids are not used as JSONP,
+            you can remove callbacks specifying --grid_callback="" ''',
+        default='grid')
+
     (options, args) = parser.parse_args()
 
     # Transfer operations
