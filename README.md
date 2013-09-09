@@ -27,7 +27,7 @@ Python installation (requires easy_install)
 
 ## Usage
 
-    ~〉mb-util -h
+    $ mb-util -h
     Usage: mb-util [options] input output
 
         Examples:
