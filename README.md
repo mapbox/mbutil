@@ -15,9 +15,11 @@ Git checkout (requires git)
 
     git clone git://github.com/mapbox/mbutil.git
     cd mbutil
+    # get usage
     ./mb-util -h
 
-    # then to install the mb-util command globally:
+Then to install the mb-util command globally:
+
     sudo python setup.py install
     # then you can run:
     mb-util
@@ -73,8 +75,11 @@ MBUtil imports and exports metadata as JSON, in the root of the tile directory, 
 
 ## Testing
 
-This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests
-and run
+This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests:
+
+    pip install nose
+
+Then run:
 
     nosetests
 
