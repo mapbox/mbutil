@@ -6,9 +6,6 @@ def clear_data():
     try: shutil.rmtree('test/output')
     except Exception: pass
 
-    try: os.path.mkdir('test/output')
-    except Exception: pass
-
 @with_setup(clear_data, clear_data)
 def test_mbtiles_to_disk():
     mbtiles_to_disk('test/data/one_tile.mbtiles', 'test/output')
