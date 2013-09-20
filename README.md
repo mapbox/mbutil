@@ -7,6 +7,8 @@ Before exporting tiles to disk, see if there's a [MapBox Hosting plan](http://ma
 or an open source [MBTiles server implementation](https://github.com/mapbox/mbtiles-spec/wiki/Implementations)
 that works for you - tiles on disk are notoriously difficult to manage.
 
+[![Build Status](https://secure.travis-ci.org/mapbox/mbutil.png)](http://travis-ci.org/mapbox/mbutil)
+
 ## Installation
 
 Git checkout (requires git)
