@@ -305,7 +305,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             data[grid_data[0]] = json.loads(grid_data[1])
             grid_data = grid_data_cursor.fetchone()
         grid_json['data'] = data
-        if callback in ("", "false", "null"):
+        if callback in (None, "", "false", "null"):
             f.write(json.dumps(grid_json))
         else:
             f.write('%s(%s);' % (callback, json.dumps(grid_json)))
