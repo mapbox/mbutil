@@ -9,7 +9,7 @@
 # for additional reference on schema see:
 # https://github.com/mapbox/node-mbtiles/blob/master/lib/schema.sql
 
-import sqlite3, uuid, sys, logging, time, os, json, zlib
+import sqlite3, uuid, sys, logging, time, os, json, zlib, re
 
 logger = logging.getLogger(__name__)
 
@@ -26,6 +26,10 @@ def mbtiles_setup(cur):
             """)
     cur.execute("""create table metadata
         (name text, value text);""")
+    cur.execute("""CREATE TABLE grids (zoom_level integer, tile_column integer,
+    tile_row integer, grid blob);""")
+    cur.execute("""CREATE TABLE grid_data (zoom_level integer, tile_column
+    integer, tile_row integer, key_name text, key_json text);""")
     cur.execute("""create unique index name on metadata (name);""")
     cur.execute("""create unique index tile_index on tiles
         (zoom_level, tile_column, tile_row);""")
@@ -142,7 +146,6 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     mbtiles_setup(cur)
     #~ image_format = 'png'
     image_format = kwargs.get('format', 'png')
-    grid_warning = True
     try:
         metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
         image_format = kwargs.get('format')
@@ -171,33 +174,46 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 y = flip_y(z, int(rowDir.replace("R", ""), 16))
             else:
                 x = int(rowDir)
-            for imageFile in os.listdir(os.path.join(directory_path, zoomDir, rowDir)):
-                img, ext = imageFile.split('.', 1)
-                if (ext == image_format):
-                    f = open(os.path.join(directory_path, zoomDir, rowDir, imageFile), 'rb')
-                    if kwargs.get('scheme') == 'xyz':
-                        y = flip_y(int(z), int(img))
-                    elif kwargs.get("scheme") == 'ags':
-                        x = int(img.replace("C", ""), 16)
-                    else:
-                        y = int(img)
+            for current_file in os.listdir(os.path.join(directory_path, zoomDir, rowDir)):
+                file_name, ext = current_file.split('.', 1)
+                f = open(os.path.join(directory_path, zoomDir, rowDir, current_file), 'rb')
+                file_content = f.read()
+                f.close()
+                if kwargs.get('scheme') == 'xyz':
+                    y = flip_y(int(z), int(file_name))
+                elif kwargs.get("scheme") == 'ags':
+                    x = int(file_name.replace("C", ""), 16)
+                else:
+                    y = int(file_name)
 
+                if (ext == image_format):
                     logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                     cur.execute("""insert into tiles (zoom_level,
                         tile_column, tile_row, tile_data) values
                         (?, ?, ?, ?);""",
-                        (z, x, y, sqlite3.Binary(f.read())))
-                    f.close()
+                        (z, x, y, sqlite3.Binary(file_content)))
                     count = count + 1
                     if (count % 100) == 0:
                         for c in msg: sys.stdout.write(chr(8))
                         msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
                         sys.stdout.write(msg)
                 elif (ext == 'grid.json'):
-                    if grid_warning:
-                        logger.warning('grid.json interactivity import not yet supported\n')
-                        grid_warning= False
-    logger.debug('tiles inserted.')
+                    logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
+                    # Remove potential callback with regex
+                    has_callback = re.match(r'[\w\s=+-/]+\(({(.|\n)*})\);?', file_content)
+                    if has_callback:
+                        file_content = has_callback.group(1)
+                    utfgrid = json.loads(file_content)
+
+                    data = utfgrid.pop('data')
+                    compressed = zlib.compress(json.dumps(utfgrid))
+                    cur.execute("""insert into grids (zoom_level, tile_column, tile_row, grid) values (?, ?, ?, ?) """, (z, x, y, sqlite3.Binary(compressed)))
+                    grid_keys = [k for k in utfgrid['keys'] if k != ""]
+                    for key_name in grid_keys:
+                        key_json = data[key_name]
+                        cur.execute("""insert into grid_data (zoom_level, tile_column, tile_row, key_name, key_json) values (?, ?, ?, ?, ?);""", (z, x, y, key_name, json.dumps(key_json)))
+
+    logger.debug('tiles (and grids) inserted.')
     optimize_database(con)
 
 def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
@@ -289,7 +305,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             data[grid_data[0]] = json.loads(grid_data[1])
             grid_data = grid_data_cursor.fetchone()
         grid_json['data'] = data
-        if callback in ("", "false", "null"):
+        if callback in (None, "", "false", "null"):
             f.write(json.dumps(grid_json))
         else:
             f.write('%s(%s);' % (callback, json.dumps(grid_json)))
