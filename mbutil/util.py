@@ -9,7 +9,7 @@
 # for additional reference on schema see:
 # https://github.com/mapbox/node-mbtiles/blob/master/lib/schema.sql
 
-import sqlite3, uuid, sys, logging, time, os, json, zlib, re
+import sqlite3, sys, logging, time, os, json, zlib, re
 
 logger = logging.getLogger(__name__)
 
@@ -53,14 +53,14 @@ def compression_prepare(cur, con):
     cur.execute("""
       CREATE TABLE if not exists images (
         tile_data blob,
-        tile_id VARCHAR(256));
+        tile_id integer);
     """)
     cur.execute("""
       CREATE TABLE if not exists map (
         zoom_level integer,
         tile_column integer,
         tile_row integer,
-        tile_id VARCHAR(256));
+        tile_id integer);
     """)
 
 def optimize_database(cur):
@@ -77,6 +77,7 @@ def compression_do(cur, con, chunk):
     cur.execute("select count(zoom_level) from tiles")
     res = cur.fetchone()
     total_tiles = res[0]
+    last_id = 0
     logging.debug("%d total tiles to fetch" % total_tiles)
     for i in range(total_tiles // chunk + 1):
         logging.debug("%d / %d rounds done" % (i, (total_tiles / chunk)))
@@ -99,22 +100,22 @@ def compression_do(cur, con, chunk):
                 cur.execute(query, (r[0], r[1], r[2], ids[files.index(r[3])]))
             else:
                 unique = unique + 1
-                id = str(uuid.uuid4())
+                last_id += 1
 
-                ids.append(id)
+                ids.append(last_id)
                 files.append(r[3])
 
                 start = time.time()
                 query = """insert into images
                     (tile_id, tile_data)
                     values (?, ?)"""
-                cur.execute(query, (str(id), sqlite3.Binary(r[3])))
+                cur.execute(query, (str(last_id), sqlite3.Binary(r[3])))
                 logger.debug("insert into images: %s" % (time.time() - start))
                 start = time.time()
                 query = """insert into map
                     (zoom_level, tile_column, tile_row, tile_id)
                     values (?, ?, ?, ?)"""
-                cur.execute(query, (r[0], r[1], r[2], id))
+                cur.execute(query, (r[0], r[1], r[2], last_id))
                 logger.debug("insert into map: %s" % (time.time() - start))
         con.commit()
 
