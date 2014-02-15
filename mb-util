@@ -44,6 +44,11 @@ if __name__ == '__main__':
             you can remove callbacks specifying --grid_callback="" ''',
         default='grid')
 
+    parser.add_option('--do_compression', dest='compression',
+        help='''Do mbtiles compression''',
+        action="store_true",
+        default=False)
+
     (options, args) = parser.parse_args()
 
     # Transfer operations

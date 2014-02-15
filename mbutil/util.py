@@ -49,6 +49,7 @@ def optimize_connection(cur):
     cur.execute("""PRAGMA journal_mode=DELETE""")
 
 def compression_prepare(cur, con):
+    logger.debug('Prepare database compression.')
     cur.execute("""
       CREATE TABLE if not exists images (
         tile_data blob,
@@ -69,6 +70,7 @@ def optimize_database(cur):
     cur.execute("""VACUUM;""")
 
 def compression_do(cur, con, chunk):
+    logger.debug('Making database compression.')
     overlapping = 0
     unique = 0
     total = 0
@@ -117,6 +119,7 @@ def compression_do(cur, con, chunk):
         con.commit()
 
 def compression_finalize(cur):
+    logger.debug('Finalizing database compression.')
     cur.execute("""drop table tiles;""")
     cur.execute("""create view tiles as
         select map.zoom_level as zoom_level,
@@ -215,6 +218,12 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                         cur.execute("""insert into grid_data (zoom_level, tile_column, tile_row, key_name, key_json) values (?, ?, ?, ?, ?);""", (z, x, y, key_name, json.dumps(key_json)))
 
     logger.debug('tiles (and grids) inserted.')
+
+    if kwargs.get('compression', False):
+        compression_prepare(cur, con)
+        compression_do(cur, con, 256)
+        compression_finalize(cur)
+
     optimize_database(con)
 
 def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
