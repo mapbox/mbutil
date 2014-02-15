@@ -48,7 +48,7 @@ def optimize_connection(cur):
     cur.execute("""PRAGMA locking_mode=EXCLUSIVE""")
     cur.execute("""PRAGMA journal_mode=DELETE""")
 
-def compression_prepare(cur, con):
+def compression_prepare(cur):
     logger.debug('Prepare database compression.')
     cur.execute("""
       CREATE TABLE if not exists images (
@@ -221,7 +221,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     logger.debug('tiles (and grids) inserted.')
 
     if kwargs.get('compression', False):
-        compression_prepare(cur, con)
+        compression_prepare(cur)
         compression_do(cur, con, 256)
         compression_finalize(cur)
 
