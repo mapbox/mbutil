@@ -200,7 +200,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 elif (ext == 'grid.json'):
                     logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                     # Remove potential callback with regex
-                    file_content = file_content.decode(encoding='utf-8')
+                    file_content = file_content.decode('utf-8')
                     has_callback = re.match(r'[\w\s=+-/]+\(({(.|\n)*})\);?', file_content)
                     if has_callback:
                         file_content = has_callback.group(1)
@@ -298,7 +298,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             os.makedirs(grid_dir)
         grid = os.path.join(grid_dir,'%s.grid.json' % (y))
         f = open(grid, 'w')
-        grid_json = json.loads(zlib.decompress(g[3]).decode(encoding='utf-8'))
+        grid_json = json.loads(zlib.decompress(g[3]).decode('utf-8'))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file
         grid_data = grid_data_cursor.fetchone()
         data = {}
