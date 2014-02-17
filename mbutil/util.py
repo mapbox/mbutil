@@ -38,7 +38,7 @@ def mbtiles_connect(mbtiles_file):
     try:
         con = sqlite3.connect(mbtiles_file)
         return con
-    except Exception, e:
+    except Exception as e:
         logger.error("Could not connect to database")
         logger.exception(e)
         sys.exit(1)
@@ -76,7 +76,7 @@ def compression_do(cur, con, chunk):
     res = cur.fetchone()
     total_tiles = res[0]
     logging.debug("%d total tiles to fetch" % total_tiles)
-    for i in range(total_tiles / chunk + 1):
+    for i in range(total_tiles // chunk + 1):
         logging.debug("%d / %d rounds done" % (i, (total_tiles / chunk)))
         ids = []
         files = []
@@ -200,13 +200,14 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 elif (ext == 'grid.json'):
                     logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                     # Remove potential callback with regex
+                    file_content = file_content.decode('utf-8')
                     has_callback = re.match(r'[\w\s=+-/]+\(({(.|\n)*})\);?', file_content)
                     if has_callback:
                         file_content = has_callback.group(1)
                     utfgrid = json.loads(file_content)
 
                     data = utfgrid.pop('data')
-                    compressed = zlib.compress(json.dumps(utfgrid))
+                    compressed = zlib.compress(json.dumps(utfgrid).encode())
                     cur.execute("""insert into grids (zoom_level, tile_column, tile_row, grid) values (?, ?, ?, ?) """, (z, x, y, sqlite3.Binary(compressed)))
                     grid_keys = [k for k in utfgrid['keys'] if k != ""]
                     for key_name in grid_keys:
@@ -245,7 +246,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         y = t[2]
         if kwargs.get('scheme') == 'xyz':
             y = flip_y(z,y)
-            print 'flipping'
+            print('flipping')
             tile_dir = os.path.join(base_path, str(z), str(x))
         elif kwargs.get('scheme') == 'wms':
             tile_dir = os.path.join(base_path,
@@ -297,7 +298,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             os.makedirs(grid_dir)
         grid = os.path.join(grid_dir,'%s.grid.json' % (y))
         f = open(grid, 'w')
-        grid_json = json.loads(zlib.decompress(g[3]))
+        grid_json = json.loads(zlib.decompress(g[3]).decode('utf-8'))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file
         grid_data = grid_data_cursor.fetchone()
         data = {}
