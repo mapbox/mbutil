@@ -86,6 +86,7 @@ Then run:
 ## See Also
 
 * [node-mbtiles provides mbpipe](https://github.com/mapbox/node-mbtiles/wiki/Post-processing-MBTiles-with-MBPipe), a useful utility.
+* [mbliberator](https://github.com/calvinmetcalf/mbliberator) a similar program but in node.
 
 ## License
 
