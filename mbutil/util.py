@@ -175,7 +175,8 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
             else:
                 x = int(rowDir)
             for current_file in os.listdir(os.path.join(directory_path, zoomDir, rowDir)):
-                file_name, ext = current_file.split('.', 1)
+                file_name, ext = os.path.splitext(current_file)
+                ext = ext[1:]
                 f = open(os.path.join(directory_path, zoomDir, rowDir, current_file), 'rb')
                 file_content = f.read()
                 f.close()
