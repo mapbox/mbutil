@@ -236,7 +236,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     if formatter:
         layer_json = os.path.join(base_path,'layer.json')
         formatter_json = {"formatter":formatter}
-        open(layer_json,'w').write('grid(' + json.dumps(formatter_json) + ')')
+        open(layer_json,'w').write(json.dumps(formatter_json))
 
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
