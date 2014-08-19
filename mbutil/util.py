@@ -313,6 +313,7 @@ def write_grid(base_path, con, kwargs, z, x, y):
         grid_data = grid_data_cursor.fetchone()
         data = {}
         while grid_data:
+            logger.debug(g)
             data[grid_data[0]] = json.loads(grid_data[1])
             grid_data = grid_data_cursor.fetchone()
         grid_json['data'] = data
