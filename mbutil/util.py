@@ -285,22 +285,22 @@ def check_for_grids(con):
         return False # no grids table
 
 
-def write_grid(base_path, con, kwargs, zoom_level, x, y):
+def write_grid(base_path, con, kwargs, z, x, y):
     msg = ''
     try:
         grid_cursor = con.execute('''select grid from grids WHERE
-            zoom_level = %(zoom_level)d and
-            tile_column = %(tile_column)d and
+            zoom_level = %(z)d and
+            tile_column = %(x)d and
             tile_row = %(y)d;''' % locals())
         grid_data_cursor = con.execute('''select key_name, key_json FROM
             grid_data WHERE
-            zoom_level = %(zoom_level)d and
-            tile_column = %(tile_column)d and
+            zoom_level = %(z)d and
+            tile_column = %(x)d and
             tile_row = %(y)d;''' % locals())
 
         if kwargs.get('scheme') == 'xyz':
-            y = flip_y(zoom_level, y)
-        grid_dir = os.path.join(base_path, str(zoom_level), str(x))
+            y = flip_y(z, y)
+        grid_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(grid_dir):
             os.makedirs(grid_dir)
         grid = os.path.join(grid_dir, '%s.grid.json' % (y))
