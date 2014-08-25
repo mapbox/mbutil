@@ -279,9 +279,14 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
 
 def check_for_grids(con):
     try:
-        count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
-        return True
+        count = con.execute('select count(zoom_level) from grid_data WHERE key_json NOT NULL;').fetchone()[0]
+        logger.debug('count: %s' % count)
+        if count > 0:
+            return True
+        else:
+            return False
     except sqlite3.OperationalError:
+        raise
         return False # no grids table
 
 
