@@ -37,3 +37,15 @@ def test_utf8grid_disk_to_mbtiles():
     original = json.load(open('test/output/original/0/0/0.grid.json'))
     imported = json.load(open('test/output/imported/0/0/0.grid.json'))
     assert original['data']['77'] == imported['data']['77'] == {u'ISO_A2': u'FR'}
+
+@with_setup(clear_data, clear_data)
+def test_mbtiles_to_disk_utfgrid_callback():
+    os.mkdir('test/output')
+    callback = {}
+    for c in ['null', 'foo']:
+        mbtiles_to_disk('test/data/utf8grid.mbtiles', 'test/output/%s' % c, callback=c)
+        f = open('test/output/%s/0/0/0.grid.json' % c)
+        callback[c] = f.read().split('{')[0]
+        f.close()
+    assert callback['foo'] == 'foo('
+    assert callback['null'] == ''
