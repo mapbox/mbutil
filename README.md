@@ -47,11 +47,19 @@ Python installation (requires easy_install)
       --scheme=SCHEME  Tiling scheme of the tiles. Default is "xyz" (z/x/y),
                        other options are "tms" which is also z/x/y
                        but uses a flipped y coordinate, and "wms" which replicates
-                       the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
+                       the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"'''
+      --image_format=FORMAT
+                       The format of the image tiles, either png, jpg, webp
+                       or pbf
+      --grid_callback=CALLBACK
+                       Option to control JSONP callback for UTFGrid tiles. If
+                       grids are not used as JSONP, you can remove callbacks 
+                       specifying --grid_callback=""
 
     Export an `mbtiles` file to files on the filesystem:
 
         mb-util World_Light.mbtiles adirectory
+
 
     Import a directory into a `mbtiles` file
 
