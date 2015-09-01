@@ -186,7 +186,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                 else:
                     y = int(file_name)
 
-                if (ext == image_format):
+                if (ext.lower() == image_format.lower()):
                     logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                     cur.execute("""insert into tiles (zoom_level,
                         tile_column, tile_row, tile_data) values
