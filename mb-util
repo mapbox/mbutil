@@ -26,10 +26,10 @@ if __name__ == '__main__':
     $ mb-util tiles world.mbtiles # mbtiles file must not already exist""")
     
     parser.add_option('--scheme', dest='scheme',
-        help='''Tiling scheme of the tiles. Default is "xyz" (z/x/y),
-            other options are "tms" which is also z/x/y
-            but uses a flipped y coordinate, and "wms" which replicates
-            the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
+        help='''Tiling scheme of the tiles. Default is "xyz" (z/x/y), other options '''
+        + '''are "tms" which is also z/x/y but uses a flipped y coordinate, and "wms" '''
+        + '''which replicates the MapServer WMS TileCache directory structure '''
+        + '''"z/000/000/x/000/000/y.png"''',
         type='choice',
         choices=['wms', 'tms', 'xyz'],
         default='xyz')
@@ -40,8 +40,8 @@ if __name__ == '__main__':
         default='png')
 
     parser.add_option('--grid_callback', dest='callback',
-        help='''Option to control JSONP callback for UTFGrid tiles. If grids are not used as JSONP,
-            you can remove callbacks specifying --grid_callback="" ''',
+        help='''Option to control JSONP callback for UTFGrid tiles. If grids are not '''
+        + '''used as JSONP, you can remove callbacks specifying --grid_callback="" ''',
         default='grid')
 
     (options, args) = parser.parse_args()
