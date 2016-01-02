@@ -217,6 +217,12 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     logger.debug('tiles (and grids) inserted.')
     optimize_database(con)
 
+def mbtiles_metadata_to_disk(mbtiles_file, **kwargs):
+    logger.debug("Exporting MBTiles metatdata from %s" % (mbtiles_file))
+    con = mbtiles_connect(mbtiles_file)
+    metadata = dict(con.execute('select name, value from metadata;').fetchall())
+    logger.debug(json.dumps(metadata, indent=2))
+
 def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     logger.debug("Exporting MBTiles to disk")
     logger.debug("%s --> %s" % (mbtiles_file, directory_path))

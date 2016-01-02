@@ -9,7 +9,7 @@
 import logging, os, sys
 from optparse import OptionParser
 
-from mbutil import mbtiles_to_disk, disk_to_mbtiles
+from mbutil import mbtiles_to_disk, disk_to_mbtiles, mbtiles_metadata_to_disk
 
 if __name__ == '__main__':
 
@@ -59,7 +59,8 @@ if __name__ == '__main__':
     if os.path.isfile(args[0]) and not os.path.exists(args[1]):
         mbtiles_file, directory_path = args
         mbtiles_to_disk(mbtiles_file, directory_path, **options.__dict__)
-    
+        mbtiles_metadata_to_disk(mbtiles_file, **options.__dict__)
+
     if os.path.isdir(args[0]) and os.path.isfile(args[1]):
         sys.stderr.write('Importing tiles into already-existing MBTiles is not yet supported\n')
         sys.exit(1)

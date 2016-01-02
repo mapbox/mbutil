@@ -88,7 +88,10 @@ MBUtil imports and exports metadata as JSON, in the root of the tile directory, 
 This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests:
 
     pip install nose
+or
 
+    easy_install nose
+    
 Then run:
 
     nosetests
