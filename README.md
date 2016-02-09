@@ -35,6 +35,8 @@ Python installation (requires easy_install)
     Usage: mb-util [options] input output
 
         Examples:
+        Export an mbtiles file to a directory of files:
+        $ mb-util world.mbtiles dumps # when the 2nd argument is "dumps", then dumps the metatdata.json
 
         Export an mbtiles file to a directory of files:
         $ mb-util world.mbtiles tiles # tiles must not already exist
@@ -88,7 +90,10 @@ MBUtil imports and exports metadata as JSON, in the root of the tile directory, 
 This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests:
 
     pip install nose
+or
 
+    easy_install nose
+    
 Then run:
 
     nosetests
