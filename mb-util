@@ -35,7 +35,7 @@ if __name__ == '__main__':
         + '''which replicates the MapServer WMS TileCache directory structure '''
         + '''"z/000/000/x/000/000/y.png"''',
         type='choice',
-        choices=['wms', 'tms', 'xyz'],
+        choices=['wms', 'tms', 'xyz', 'gwc'],
         default='xyz')
         
     parser.add_option('--image_format', dest='format',
