@@ -1,9 +1,9 @@
 # MBUtil
 
 MBUtil is a utility for importing and exporting the [MBTiles](http://mbtiles.org/) format,
-typically created with [MapBox](http://mapbox.com/) [TileMill](http://mapbox.com/tilemill/).
+typically created with [Mapbox](http://mapbox.com/) [TileMill](http://mapbox.com/tilemill/).
 
-Before exporting tiles to disk, see if there's a [MapBox Hosting plan](http://mapbox.com/plans/)
+Before exporting tiles to disk, see if there's a [Mapbox Hosting plan](http://mapbox.com/plans/)
 or an open source [MBTiles server implementation](https://github.com/mapbox/mbtiles-spec/wiki/Implementations)
 that works for you - tiles on disk are notoriously difficult to manage.
 
@@ -55,10 +55,16 @@ Python installation (requires easy_install)
                             grids are not used as JSONP,             you can
                             remove callbacks specifying --grid_callback=""
       --do_compression      Do mbtiles compression
+      --grid_callback=CALLBACK
+                            Option to control JSONP callback for UTFGrid tiles. If
+                            grids are not used as JSONP, you can remove callbacks
+                            specifying --grid_callback=""
+
 
     Export an `mbtiles` file to files on the filesystem:
 
         mb-util World_Light.mbtiles adirectory
+
 
     Import a directory into a `mbtiles` file
 
@@ -85,7 +91,10 @@ MBUtil imports and exports metadata as JSON, in the root of the tile directory, 
 This project uses [nosetests](http://readthedocs.org/docs/nose/en/latest/) for testing. Install nosetests:
 
     pip install nose
+or
 
+    easy_install nose
+    
 Then run:
 
     nosetests
