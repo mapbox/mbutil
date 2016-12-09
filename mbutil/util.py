@@ -178,7 +178,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
         for rowDir in getDirs(os.path.join(directory_path, zoomDir)):
             if kwargs.get("scheme") == 'ags':
                 y = flip_y(z, int(rowDir.replace("R", ""), 16))
-            if kwargs.get("scheme") == 'gwc':
+            elif kwargs.get("scheme") == 'gwc':
                 pass
             else:
                 x = int(rowDir)
