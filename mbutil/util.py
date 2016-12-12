@@ -265,6 +265,8 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         formatter_json = {"formatter":formatter}
         open(layer_json,'w').write(json.dumps(formatter_json))
 
+    bool_grids = check_for_grids(con)
+
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
     while t:
@@ -297,35 +299,51 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
         logger.info('%s / %s tiles exported' % (done, count))
+
+        if bool_grids:
+            write_grid(base_path, con, kwargs, z, x, y)
         t = tiles.fetchone()
 
-    # grids
-    callback = kwargs.get('callback')
-    done = 0
+def check_for_grids(con):
+    try:
+        count = con.execute('select count(zoom_level) from grid_data WHERE key_json NOT NULL;').fetchone()[0]
+        logger.debug('count: %s' % count)
+        if count > 0:
+            return True
+        else:
+            return False
+    except sqlite3.OperationalError:
+        raise
+        return False # no grids table
+
+
+def write_grid(base_path, con, kwargs, z, x, y_orig):
     msg = ''
     try:
-        count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
-        grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
-        g = grids.fetchone()
-    except sqlite3.OperationalError:
-        g = None # no grids table
-    while g:
-        zoom_level = g[0] # z
-        tile_column = g[1] # x
-        y = g[2] # y
+
+        if kwargs.get('scheme') == 'xyz':
+            y = flip_y(z, y_orig)
+        else:
+            y = y_orig
+        grid_cursor = con.execute('''select grid from grids WHERE
+            zoom_level = %(z)d and
+            tile_column = %(x)d and
+            tile_row = %(y)d;''' % locals())
         grid_data_cursor = con.execute('''select key_name, key_json FROM
             grid_data WHERE
-            zoom_level = %(zoom_level)d and
-            tile_column = %(tile_column)d and
-            tile_row = %(y)d;''' % locals() )
-        if kwargs.get('scheme') == 'xyz':
-            y = flip_y(zoom_level,y)
-        grid_dir = os.path.join(base_path, str(zoom_level), str(tile_column))
+            zoom_level = %(z)d and
+            tile_column = %(x)d and
+            tile_row = %(y)d;''' % locals())
+
+
+        grid_dir = os.path.join(base_path, str(z), str(x))
         if not os.path.isdir(grid_dir):
             os.makedirs(grid_dir)
-        grid = os.path.join(grid_dir,'%s.grid.json' % (y))
+        grid = os.path.join(grid_dir, '%s.grid.json' % (y_orig))
         f = open(grid, 'w')
-        grid_json = json.loads(zlib.decompress(g[3]).decode('utf-8'))
+
+        g = grid_cursor.fetchone()
+        grid_json = json.loads(zlib.decompress(g[0]).decode('utf-8'))
         # join up with the grid 'data' which is in pieces when stored in mbtiles file
         grid_data = grid_data_cursor.fetchone()
         data = {}
@@ -333,12 +351,9 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             data[grid_data[0]] = json.loads(grid_data[1])
             grid_data = grid_data_cursor.fetchone()
         grid_json['data'] = data
-        if callback in (None, "", "false", "null"):
-            f.write(json.dumps(grid_json))
-        else:
-            f.write('%s(%s);' % (callback, json.dumps(grid_json)))
+        f.write(json.dumps(grid_json))
         f.close()
-        done = done + 1
         for c in msg: sys.stdout.write(chr(8))
-        logger.info('%s / %s grids exported' % (done, count))
-        g = grids.fetchone()
+        return True
+    except:
+        return False  # not happening at the moment
