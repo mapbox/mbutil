@@ -54,7 +54,7 @@ if __name__ == '__main__':
         default=False)
 
     parser.add_option('--silent', dest='silent',
-        help='''Wether the operations should run silently''',
+        help='''Dictate whether the operations should run silently''',
         action="store_true",
         default=False)
 

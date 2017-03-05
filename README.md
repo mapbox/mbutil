@@ -43,22 +43,19 @@ Python installation (requires easy_install)
         $ mb-util tiles world.mbtiles # mbtiles file must not already exist
 
     Options:
-      -h, --help       show this help message and exit
-      --scheme=SCHEME  Tiling scheme of the tiles. Default is "xyz" (z/x/y),
-                       other options are "tms" which is also z/x/y
-                       but uses a flipped y coordinate, and "wms" which replicates
-                       the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
+    -h, --help              show this help message and exit
+    --scheme=SCHEME         Tiling scheme of the tiles. Default is "xyz" (z/x/y),
+                            other options are "tms" which is also z/x/y
+                            but uses a flipped y coordinate, and "wms" which replicates
+                            the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
       --image_format=FORMAT
-                            The format of the image tiles, either png or jpg
+                            The format of the image tiles, either png, jpg, webp or pbf
       --grid_callback=CALLBACK
                             Option to control JSONP callback for UTFGrid tiles. If
-                            grids are not used as JSONP,             you can
+                            grids are not used as JSONP, you can
                             remove callbacks specifying --grid_callback=""
       --do_compression      Do mbtiles compression
-      --grid_callback=CALLBACK
-                            Option to control JSONP callback for UTFGrid tiles. If
-                            grids are not used as JSONP, you can remove callbacks
-                            specifying --grid_callback=""
+      --silent              Dictate whether the operations should run silentl
 
 
     Export an `mbtiles` file to files on the filesystem:
