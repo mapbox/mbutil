@@ -1,4 +1,5 @@
 import os, shutil
+import sys
 import json
 from nose import with_setup
 from mbutil import mbtiles_to_disk, disk_to_mbtiles
