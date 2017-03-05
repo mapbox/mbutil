@@ -43,8 +43,8 @@ Python installation (requires easy_install)
         $ mb-util tiles world.mbtiles # mbtiles file must not already exist
 
     Options:
-    -h, --help              show this help message and exit
-    --scheme=SCHEME         Tiling scheme of the tiles. Default is "xyz" (z/x/y),
+      -h, --help            Show this help message and exit
+      --scheme=SCHEME       Tiling scheme of the tiles. Default is "xyz" (z/x/y),
                             other options are "tms" which is also z/x/y
                             but uses a flipped y coordinate, and "wms" which replicates
                             the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
