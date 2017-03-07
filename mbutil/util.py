@@ -34,13 +34,14 @@ def mbtiles_setup(cur):
     cur.execute("""create unique index tile_index on tiles
         (zoom_level, tile_column, tile_row);""")
 
-def mbtiles_connect(mbtiles_file):
+def mbtiles_connect(mbtiles_file, silent):
     try:
         con = sqlite3.connect(mbtiles_file)
         return con
     except Exception as e:
-        logger.error("Could not connect to database")
-        logger.exception(e)
+        if not silent:
+            logger.error("Could not connect to database")
+            logger.exception(e)
         sys.exit(1)
 
 def optimize_connection(cur):
@@ -48,8 +49,9 @@ def optimize_connection(cur):
     cur.execute("""PRAGMA locking_mode=EXCLUSIVE""")
     cur.execute("""PRAGMA journal_mode=DELETE""")
 
-def compression_prepare(cur):
-    logger.debug('Prepare database compression.')
+def compression_prepare(cur, silent):
+    if not silent: 
+        logger.debug('Prepare database compression.')
     cur.execute("""
       CREATE TABLE if not exists images (
         tile_data blob,
@@ -63,14 +65,17 @@ def compression_prepare(cur):
         tile_id integer);
     """)
 
-def optimize_database(cur):
-    logger.debug('analyzing db')
+def optimize_database(cur, silent):
+    if not silent: 
+        logger.debug('analyzing db')
     cur.execute("""ANALYZE;""")
-    logger.debug('cleaning db')
+    if not silent: 
+        logger.debug('cleaning db')
     cur.execute("""VACUUM;""")
 
-def compression_do(cur, con, chunk):
-    logger.debug('Making database compression.')
+def compression_do(cur, con, chunk, silent):
+    if not silent:
+        logger.debug('Making database compression.')
     overlapping = 0
     unique = 0
     total = 0
@@ -137,57 +142,67 @@ def compression_finalize(cur):
     cur.execute("""vacuum;""")
     cur.execute("""analyze;""")
 
-def getDirs(path):
+def get_dirs(path):
     return [name for name in os.listdir(path)
         if os.path.isdir(os.path.join(path, name))]
 
 def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
-    logger.info("Importing disk to MBTiles")
-    logger.debug("%s --> %s" % (directory_path, mbtiles_file))
-    con = mbtiles_connect(mbtiles_file)
+
+    silent = kwargs.get('silent')
+
+    if not silent:
+        logger.info("Importing disk to MBTiles")
+        logger.debug("%s --> %s" % (directory_path, mbtiles_file))
+
+    con = mbtiles_connect(mbtiles_file, silent)
     cur = con.cursor()
     optimize_connection(cur)
     mbtiles_setup(cur)
     #~ image_format = 'png'
     image_format = kwargs.get('format', 'png')
+
     try:
         metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
         image_format = kwargs.get('format')
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                 (name, value))
-        logger.info('metadata from metadata.json restored')
+        if not silent: 
+            logger.info('metadata from metadata.json restored')
     except IOError:
-        logger.warning('metadata.json not found')
+        if not silent: 
+            logger.warning('metadata.json not found')
 
     count = 0
     start_time = time.time()
     msg = ""
 
-    for zoomDir in getDirs(directory_path):
+    for zoom_dir in get_dirs(directory_path):
         if kwargs.get("scheme") == 'ags':
-            if not "L" in zoomDir:
-                logger.warning("You appear to be using an ags scheme on an non-arcgis Server cache.")
-            z = int(zoomDir.replace("L", ""))
+            if not "L" in zoom_dir:
+                if not silent: 
+                    logger.warning("You appear to be using an ags scheme on an non-arcgis Server cache.")
+            z = int(zoom_dir.replace("L", ""))
         elif kwargs.get("scheme") == 'gwc':
-            z=int(zoomDir[-2:])
+            z=int(zoom_dir[-2:])
         else:
-            if "L" in zoomDir:
-                logger.warning("You appear to be using a %s scheme on an arcgis Server cache. Try using --scheme=ags instead" % kwargs.get("scheme"))
-            z = int(zoomDir)
-        for rowDir in getDirs(os.path.join(directory_path, zoomDir)):
+            if "L" in zoom_dir:
+                if not silent: 
+                    logger.warning("You appear to be using a %s scheme on an arcgis Server cache. Try using --scheme=ags instead" % kwargs.get("scheme"))
+            z = int(zoom_dir)
+        for row_dir in get_dirs(os.path.join(directory_path, zoom_dir)):
             if kwargs.get("scheme") == 'ags':
-                y = flip_y(z, int(rowDir.replace("R", ""), 16))
+                y = flip_y(z, int(row_dir.replace("R", ""), 16))
             elif kwargs.get("scheme") == 'gwc':
                 pass
             else:
-                x = int(rowDir)
-            for current_file in os.listdir(os.path.join(directory_path, zoomDir, rowDir)):
-                if current_file == ".DS_Store":
+                x = int(row_dir)
+            for current_file in os.listdir(os.path.join(directory_path, zoom_dir, row_dir)):
+                if current_file == ".DS_Store" and not silent:
                     logger.warning("Your OS is MacOS,and the .DS_Store file will be ignored.")
                 else:
                     file_name, ext = current_file.split('.',1)
-                    f = open(os.path.join(directory_path, zoomDir, rowDir, current_file), 'rb')
+                    f = open(os.path.join(directory_path, zoom_dir, row_dir, current_file), 'rb')
                     file_content = f.read()
                     f.close()
                     if kwargs.get('scheme') == 'xyz':
@@ -202,7 +217,8 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                         y = int(file_name)
 
                     if (ext == image_format):
-                        logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
+                        if not silent:
+                            logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                         cur.execute("""insert into tiles (zoom_level,
                             tile_column, tile_row, tile_data) values
                             (?, ?, ?, ?);""",
@@ -213,7 +229,8 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                             msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
                             sys.stdout.write(msg)
                     elif (ext == 'grid.json'):
-                        logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
+                        if not silent:
+                            logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                         # Remove potential callback with regex
                         file_content = file_content.decode('utf-8')
                         has_callback = re.match(r'[\w\s=+-/]+\(({(.|\n)*})\);?', file_content)
@@ -228,26 +245,32 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                         for key_name in grid_keys:
                             key_json = data[key_name]
                             cur.execute("""insert into grid_data (zoom_level, tile_column, tile_row, key_name, key_json) values (?, ?, ?, ?, ?);""", (z, x, y, key_name, json.dumps(key_json)))
-
-    logger.debug('tiles (and grids) inserted.')
+    
+    if not silent:
+        logger.debug('tiles (and grids) inserted.')
 
     if kwargs.get('compression', False):
         compression_prepare(cur)
-        compression_do(cur, con, 256)
+        compression_do(cur, con, 256, silent)
         compression_finalize(cur)
 
-    optimize_database(con)
+    optimize_database(con, silent)
 
 def mbtiles_metadata_to_disk(mbtiles_file, **kwargs):
-    logger.debug("Exporting MBTiles metatdata from %s" % (mbtiles_file))
-    con = mbtiles_connect(mbtiles_file)
+    silent = kwargs.get('silent')
+    if not silent:
+        logger.debug("Exporting MBTiles metatdata from %s" % (mbtiles_file))
+    con = mbtiles_connect(mbtiles_file, silent)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
-    logger.debug(json.dumps(metadata, indent=2))
+    if not silent:
+        logger.debug(json.dumps(metadata, indent=2))
 
 def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
-    logger.debug("Exporting MBTiles to disk")
-    logger.debug("%s --> %s" % (mbtiles_file, directory_path))
-    con = mbtiles_connect(mbtiles_file)
+    silent = kwargs.get('silent')
+    if not silent:
+        logger.debug("Exporting MBTiles to disk")
+        logger.debug("%s --> %s" % (mbtiles_file, directory_path))
+    con = mbtiles_connect(mbtiles_file, silent)
     os.mkdir("%s" % directory_path)
     metadata = dict(con.execute('select name, value from metadata;').fetchall())
     json.dump(metadata, open(os.path.join(directory_path, 'metadata.json'), 'w'), indent=4)
@@ -261,9 +284,9 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     # if interactivity
     formatter = metadata.get('formatter')
     if formatter:
-        layer_json = os.path.join(base_path,'layer.json')
+        layer_json = os.path.join(base_path, 'layer.json')
         formatter_json = {"formatter":formatter}
-        open(layer_json,'w').write(json.dumps(formatter_json))
+        open(layer_json, 'w').write(json.dumps(formatter_json))
 
     tiles = con.execute('select zoom_level, tile_column, tile_row, tile_data from tiles;')
     t = tiles.fetchone()
@@ -273,7 +296,8 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         y = t[2]
         if kwargs.get('scheme') == 'xyz':
             y = flip_y(z,y)
-            print('flipping')
+            if not silent:
+                logger.debug('flipping')
             tile_dir = os.path.join(base_path, str(z), str(x))
         elif kwargs.get('scheme') == 'wms':
             tile_dir = os.path.join(base_path,
@@ -296,7 +320,8 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
-        logger.info('%s / %s tiles exported' % (done, count))
+        if not silent:
+            logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
 
     # grids
@@ -340,5 +365,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f.close()
         done = done + 1
         for c in msg: sys.stdout.write(chr(8))
-        logger.info('%s / %s grids exported' % (done, count))
+        if not silent:
+            logger.info('%s / %s grids exported' % (done, count))
         g = grids.fetchone()
