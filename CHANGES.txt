@@ -1,3 +1,9 @@
+### v0.3.0
+* Preliminary Python 3 support
+
+### v0.2.0
+* ? See closed PRs
+
 ### v0.1.0
 
 * Switch tests to nosetest
