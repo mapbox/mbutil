@@ -71,7 +71,13 @@ def optimize_database(cur, silent):
     cur.execute("""ANALYZE;""")
     if not silent: 
         logger.debug('cleaning db')
+
+    # Workaround for python>=3.6.0,python<3.6.2
+    # https://bugs.python.org/issue28518
+    cur.isolation_level = None
     cur.execute("""VACUUM;""")
+    cur.isolation_level = ''  # reset default value of isolation_level
+
 
 def compression_do(cur, con, chunk, silent):
     if not silent:
