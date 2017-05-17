@@ -55,7 +55,7 @@ Python installation (requires easy_install)
                             grids are not used as JSONP, you can
                             remove callbacks specifying --grid_callback=""
       --do_compression      Do mbtiles compression
-      --silent              Dictate whether the operations should run silentl
+      --silent              Dictate whether the operations should run silently
 
 
     Export an `mbtiles` file to files on the filesystem:
