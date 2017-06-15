@@ -130,7 +130,7 @@ def compression_do(cur, con, chunk, silent):
                 logger.debug("insert into map: %s" % (time.time() - start))
         con.commit()
 
-def compression_finalize(cur):
+def compression_finalize(cur, con):
     logger.debug('Finalizing database compression.')
     cur.execute("""drop table tiles;""")
     cur.execute("""create view tiles as
@@ -145,7 +145,13 @@ def compression_finalize(cur):
     cur.execute("""
           CREATE UNIQUE INDEX images_id on images
             (tile_id);""")
+
+    # Workaround for python>=3.6.0,python<3.6.2
+    # https://bugs.python.org/issue28518
+    con.isolation_level = None
     cur.execute("""vacuum;""")
+    con.isolation_level = ''  # reset default value of isolation_level
+
     cur.execute("""analyze;""")
 
 def get_dirs(path):
@@ -258,7 +264,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     if kwargs.get('compression', False):
         compression_prepare(cur)
         compression_do(cur, con, 256, silent)
-        compression_finalize(cur)
+        compression_finalize(cur, con)
 
     optimize_database(con, silent)
 
