@@ -194,7 +194,6 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
 
     count = 0
     start_time = time.time()
-    msg = ""
 
     for zoom_dir in get_dirs(directory_path):
         if kwargs.get("scheme") == 'ags':
@@ -244,9 +243,7 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                             (z, x, y, sqlite3.Binary(file_content)))
                         count = count + 1
                         if (count % 100) == 0 and not silent:
-                            for c in msg: sys.stdout.write(chr(8))
-                            msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
-                            sys.stdout.write(msg)
+                            logger.info(" %s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time)))
                     elif (ext == 'grid.json'):
                         if not silent:
                             logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
@@ -295,7 +292,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     json.dump(metadata, open(os.path.join(directory_path, 'metadata.json'), 'w'), indent=4)
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
-    msg = ''
     base_path = directory_path
     if not os.path.isdir(base_path):
         os.makedirs(base_path)
@@ -338,7 +334,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f.write(t[3])
         f.close()
         done = done + 1
-        for c in msg: sys.stdout.write(chr(8))
         if not silent:
             logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
@@ -346,7 +341,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     # grids
     callback = kwargs.get('callback')
     done = 0
-    msg = ''
     try:
         count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
         grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
@@ -383,7 +377,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             f.write('%s(%s);' % (callback, json.dumps(grid_json)))
         f.close()
         done = done + 1
-        for c in msg: sys.stdout.write(chr(8))
         if not silent:
             logger.info('%s / %s grids exported' % (done, count))
         g = grids.fetchone()
