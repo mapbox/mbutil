@@ -89,15 +89,18 @@ def compression_do(cur, con, chunk, silent):
     res = cur.fetchone()
     total_tiles = res[0]
     last_id = 0
-    logging.debug("%d total tiles to fetch" % total_tiles)
+    if not silent:
+        logging.debug("%d total tiles to fetch" % total_tiles)
     for i in range(total_tiles // chunk + 1):
-        logging.debug("%d / %d rounds done" % (i, (total_tiles / chunk)))
+        if not silent:
+            logging.debug("%d / %d rounds done" % (i, (total_tiles / chunk)))
         ids = []
         files = []
         start = time.time()
         cur.execute("""select zoom_level, tile_column, tile_row, tile_data
             from tiles where rowid > ? and rowid <= ?""", ((i * chunk), ((i + 1) * chunk)))
-        logger.debug("select: %s" % (time.time() - start))
+        if not silent:
+            logger.debug("select: %s" % (time.time() - start))
         rows = cur.fetchall()
         for r in rows:
             total = total + 1
@@ -107,7 +110,8 @@ def compression_do(cur, con, chunk, silent):
                 query = """insert into map
                     (zoom_level, tile_column, tile_row, tile_id)
                     values (?, ?, ?, ?)"""
-                logger.debug("insert: %s" % (time.time() - start))
+                if not silent:
+                    logger.debug("insert: %s" % (time.time() - start))
                 cur.execute(query, (r[0], r[1], r[2], ids[files.index(r[3])]))
             else:
                 unique = unique + 1
@@ -121,17 +125,20 @@ def compression_do(cur, con, chunk, silent):
                     (tile_id, tile_data)
                     values (?, ?)"""
                 cur.execute(query, (str(last_id), sqlite3.Binary(r[3])))
-                logger.debug("insert into images: %s" % (time.time() - start))
+                if not silent:
+                    logger.debug("insert into images: %s" % (time.time() - start))
                 start = time.time()
                 query = """insert into map
                     (zoom_level, tile_column, tile_row, tile_id)
                     values (?, ?, ?, ?)"""
                 cur.execute(query, (r[0], r[1], r[2], last_id))
-                logger.debug("insert into map: %s" % (time.time() - start))
+                if not silent:
+                    logger.debug("insert into map: %s" % (time.time() - start))
         con.commit()
 
-def compression_finalize(cur, con):
-    logger.debug('Finalizing database compression.')
+def compression_finalize(cur, con, silent):
+    if not silent:
+        logger.debug('Finalizing database compression.')
     cur.execute("""drop table tiles;""")
     cur.execute("""create view tiles as
         select map.zoom_level as zoom_level,
@@ -187,7 +194,6 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
 
     count = 0
     start_time = time.time()
-    msg = ""
 
     for zoom_dir in get_dirs(directory_path):
         if kwargs.get("scheme") == 'ags':
@@ -236,10 +242,8 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                             (?, ?, ?, ?);""",
                             (z, x, y, sqlite3.Binary(file_content)))
                         count = count + 1
-                        if (count % 100) == 0:
-                            for c in msg: sys.stdout.write(chr(8))
-                            msg = "%s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time))
-                            sys.stdout.write(msg)
+                        if (count % 100) == 0 and not silent:
+                            logger.info(" %s tiles inserted (%d tiles/sec)" % (count, count / (time.time() - start_time)))
                     elif (ext == 'grid.json'):
                         if not silent:
                             logger.debug(' Read grid from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
@@ -257,14 +261,14 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                         for key_name in grid_keys:
                             key_json = data[key_name]
                             cur.execute("""insert into grid_data (zoom_level, tile_column, tile_row, key_name, key_json) values (?, ?, ?, ?, ?);""", (z, x, y, key_name, json.dumps(key_json)))
-    
+
     if not silent:
         logger.debug('tiles (and grids) inserted.')
 
     if kwargs.get('compression', False):
-        compression_prepare(cur)
+        compression_prepare(cur, silent)
         compression_do(cur, con, 256, silent)
-        compression_finalize(cur, con)
+        compression_finalize(cur, con, silent)
 
     optimize_database(con, silent)
 
@@ -288,7 +292,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     json.dump(metadata, open(os.path.join(directory_path, 'metadata.json'), 'w'), indent=4)
     count = con.execute('select count(zoom_level) from tiles;').fetchone()[0]
     done = 0
-    msg = ''
     base_path = directory_path
     if not os.path.isdir(base_path):
         os.makedirs(base_path)
@@ -331,7 +334,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f.write(t[3])
         f.close()
         done = done + 1
-        for c in msg: sys.stdout.write(chr(8))
         if not silent:
             logger.info('%s / %s tiles exported' % (done, count))
         t = tiles.fetchone()
@@ -339,7 +341,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
     # grids
     callback = kwargs.get('callback')
     done = 0
-    msg = ''
     try:
         count = con.execute('select count(zoom_level) from grids;').fetchone()[0]
         grids = con.execute('select zoom_level, tile_column, tile_row, grid from grids;')
@@ -376,7 +377,6 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
             f.write('%s(%s);' % (callback, json.dumps(grid_json)))
         f.close()
         done = done + 1
-        for c in msg: sys.stdout.write(chr(8))
         if not silent:
             logger.info('%s / %s grids exported' % (done, count))
         g = grids.fetchone()
