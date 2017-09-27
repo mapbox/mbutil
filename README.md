@@ -9,6 +9,8 @@ that works for you - tiles on disk are notoriously difficult to manage.
 
 [![Build Status](https://secure.travis-ci.org/mapbox/mbutil.png)](http://travis-ci.org/mapbox/mbutil)
 
+**Note well**: this project is no longer actively developed. Issues and pull requests will be attended to when possible, but delays should be expected.
+
 ## Installation
 
 Git checkout (requires git)
