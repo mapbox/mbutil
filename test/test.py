@@ -50,3 +50,10 @@ def test_mbtiles_to_disk_utfgrid_callback():
         f.close()
     assert callback['foo'] == 'foo('
     assert callback['null'] == ''
+
+@with_setup(clear_data, clear_data)
+def test_disk_to_mbtiles_zyx():
+    os.mkdir('test/output')
+    disk_to_mbtiles('test/data/tiles/zyx', 'test/output/zyx.mbtiles', scheme='zyx', format='png')
+    mbtiles_to_disk('test/output/zyx.mbtiles', 'test/output/tiles', callback=None)
+    assert os.path.exists('test/output/tiles/3/1/5.png')
