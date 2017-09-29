@@ -177,12 +177,12 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
     cur = con.cursor()
     optimize_connection(cur)
     mbtiles_setup(cur)
-    #~ image_format = 'png'
     image_format = kwargs.get('format', 'png')
 
     try:
         metadata = json.load(open(os.path.join(directory_path, 'metadata.json'), 'r'))
-        image_format = kwargs.get('format')
+        if 'format' in metadata:
+            image_format = metadata['format']
         for name, value in metadata.items():
             cur.execute('insert into metadata (name, value) values (?, ?)',
                 (name, value))
