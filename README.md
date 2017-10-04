@@ -50,6 +50,7 @@ Python installation (requires easy_install)
                             other options are "tms" which is also z/x/y
                             but uses a flipped y coordinate, and "wms" which replicates
                             the MapServer WMS TileCache directory structure "z/000/000/x/000/000/y.png"''',
+                            and "zyx" which is the format vips dzsave --layout google uses.
       --image_format=FORMAT
                             The format of the image tiles, either png, jpg, webp or pbf
       --grid_callback=CALLBACK
