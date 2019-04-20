@@ -398,8 +398,8 @@ def uncompressFile(srcFileName):
         with gzip.open(srcFileName_tmp,'rb') as fIn :
             with open(srcFileName,'wb') as fOut :
                 shutil.copyfileobj(fIn,fOut)
-        print("uncompressed file {0}".format(srcFileName))
+        logger.info("uncompressed file {0}".format(srcFileName))
         # remove the temp file
         os.remove(srcFileName_tmp)
     else :
-        print("found some other file {0}".format(srcFileName))
+        logger.info("found some other file {0}".format(srcFileName))
