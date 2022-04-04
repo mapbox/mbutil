@@ -15,7 +15,7 @@ that works for you - tiles on disk are notoriously difficult to manage.
 
 Git checkout (requires git)
 
-    git clone git://github.com/mapbox/mbutil.git
+    git clone https://github.com/mapbox/mbutil.git
     cd mbutil
     # get usage
     ./mb-util -h
