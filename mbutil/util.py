@@ -200,14 +200,19 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
             if not "L" in zoom_dir:
                 if not silent: 
                     logger.warning("You appear to be using an ags scheme on an non-arcgis Server cache.")
-            z = int(zoom_dir.replace("L", ""))
+            z_str = zoom_dir.replace("L", "")
         elif kwargs.get("scheme") == 'gwc':
-            z=int(zoom_dir[-2:])
+            z_str = zoom_dir[-2:]
         else:
             if "L" in zoom_dir:
                 if not silent: 
                     logger.warning("You appear to be using a %s scheme on an arcgis Server cache. Try using --scheme=ags instead" % kwargs.get("scheme"))
-            z = int(zoom_dir)
+            z_str = zoom_dir
+        try:
+            z = int(z_str)
+        except ValueError:
+            logger.warning("Folder name :""" + z_str + "is invalid.")
+            continue
         for row_dir in get_dirs(os.path.join(directory_path, zoom_dir)):
             if kwargs.get("scheme") == 'ags':
                 y = flip_y(z, int(row_dir.replace("R", ""), 16))
