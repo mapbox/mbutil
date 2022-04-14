@@ -10,6 +10,7 @@
 # https://github.com/mapbox/node-mbtiles/blob/master/lib/schema.sql
 
 import sqlite3, sys, logging, time, os, json, zlib, re
+import shutil,gzip
 
 logger = logging.getLogger(__name__)
 
@@ -337,6 +338,7 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         f = open(tile, 'wb')
         f.write(t[3])
         f.close()
+        uncompressFile(tile)
         done = done + 1
         if not silent:
             logger.info('%s / %s tiles exported' % (done, count))
@@ -384,3 +386,20 @@ def mbtiles_to_disk(mbtiles_file, directory_path, **kwargs):
         if not silent:
             logger.info('%s / %s grids exported' % (done, count))
         g = grids.fetchone()
+
+# uncompress the file
+def uncompressFile(srcFileName):
+    #do this if you only find .pbf file
+    if srcFileName.find(".pbf") != -1 :
+        #temperoraly copy the contents 
+        srcFileName_tmp = srcFileName.replace(".pbf", "_tmp.pbf")
+        shutil.copy2(srcFileName, srcFileName_tmp)
+
+        with gzip.open(srcFileName_tmp,'rb') as fIn :
+            with open(srcFileName,'wb') as fOut :
+                shutil.copyfileobj(fIn,fOut)
+        logger.info("uncompressed file {0}".format(srcFileName))
+        # remove the temp file
+        os.remove(srcFileName_tmp)
+    else :
+        logger.info("found some other file {0}".format(srcFileName))
