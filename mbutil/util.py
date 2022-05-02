@@ -222,6 +222,8 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                     logger.warning("Your OS is MacOS,and the .DS_Store file will be ignored.")
                 else:
                     file_name, ext = current_file.split('.',1)
+                    if (ext != image_format and ext != 'grid.json'):
+                        continue
                     f = open(os.path.join(directory_path, zoom_dir, row_dir, current_file), 'rb')
                     file_content = f.read()
                     f.close()
