@@ -239,6 +239,10 @@ def disk_to_mbtiles(directory_path, mbtiles_file, **kwargs):
                         y = int(file_name)
 
                     if (ext == image_format):
+                        
+                        if kwargs.get('gzip', False):
+                            file_content = zlib.compress(file_content)
+                        
                         if not silent:
                             logger.debug(' Read tile from Zoom (z): %i\tCol (x): %i\tRow (y): %i' % (z, x, y))
                         cur.execute("""insert into tiles (zoom_level,

@@ -53,6 +53,11 @@ if __name__ == '__main__':
         action="store_true",
         default=False)
 
+    parser.add_option('--gzip', dest='gzip',
+        help='''Do gzip compression for all tiles (makes sense for pbf)''',
+        action="store_true",
+        default=False)
+
     parser.add_option('--silent', dest='silent',
         help='''Dictate whether the operations should run silently''',
         action="store_true",
